@@ -1,0 +1,11 @@
+[package]
+name = "daedalus-kit"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bstr = "1.9.1"
+codespan-reporting = "0.11.1"
+encoding_rs = "0.8.33"
+logos = "0.14.0"
+thiserror = "1.0.58"
