@@ -163,13 +163,13 @@ impl<'a> DaedalusLexer<'a> {
         self.lexer.span()
     }
 
-    pub fn eat_whitespace(&mut self) {
+    pub fn eat_while(&mut self, f: impl Fn(&Token) -> bool) {
         loop {
             let Some(Ok(token)) = self.lexer.clone().next() else {
                 break;
             };
 
-            if let Token::Whitespace | Token::Newline | Token::LineComment = token {
+            if f(&token) {
                 self.lexer.next();
             } else {
                 break;
@@ -177,9 +177,16 @@ impl<'a> DaedalusLexer<'a> {
         }
     }
 
-    pub fn peek(&mut self) -> Result<Token, ParseError> {
-        self.eat_whitespace();
+    pub fn eat_whitespace(&mut self) {
+        self.eat_while(|token| {
+            matches!(
+                token,
+                Token::Whitespace | Token::Newline | Token::LineComment
+            )
+        });
+    }
 
+    pub fn peek_raw(&mut self) -> Result<Token, ParseError> {
         let peek = self.lexer.clone().next();
 
         let Some(peek) = peek else {
@@ -193,9 +200,7 @@ impl<'a> DaedalusLexer<'a> {
         Ok(peek)
     }
 
-    pub fn eat_one(&mut self) -> Result<Token, ParseError> {
-        self.eat_whitespace();
-
+    pub fn eat_one_raw(&mut self) -> Result<Token, ParseError> {
         let Some(token) = self.lexer.next() else {
             return Err(ParseError::eof(self.span()));
         };
@@ -205,6 +210,21 @@ impl<'a> DaedalusLexer<'a> {
         };
 
         Ok(token)
+    }
+
+    pub fn peek_with_comments(&mut self) -> Result<Token, ParseError> {
+        self.eat_while(|token| matches!(token, Token::Whitespace | Token::Newline));
+        self.peek_raw()
+    }
+
+    pub fn peek(&mut self) -> Result<Token, ParseError> {
+        self.eat_whitespace();
+        self.peek_raw()
+    }
+
+    pub fn eat_one(&mut self) -> Result<Token, ParseError> {
+        self.eat_whitespace();
+        self.eat_one_raw()
     }
 
     pub fn eat_ident(&mut self) -> Result<&'a str, ParseError> {

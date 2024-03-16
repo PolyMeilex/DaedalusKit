@@ -8,12 +8,17 @@ use std::fmt::Write;
 #[derive(Debug)]
 pub struct FunctionCall<'a> {
     pub ident: &'a str,
+    pub trailing_comment: Option<&'a str>,
 }
 
 impl<'a> DaedalusDisplay for FunctionCall<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         f.write_indent()?;
-        writeln!(f, "{}();", self.ident)?;
+        write!(f, "{}();", self.ident)?;
+        if let Some(comment) = self.trailing_comment {
+            write!(f, " {}", comment)?;
+        }
+        writeln!(f)?;
         Ok(())
     }
 }
@@ -26,7 +31,18 @@ impl<'a> FunctionCall<'a> {
 
         lexer.eat_token(Token::Semi)?;
 
-        Ok(Self { ident })
+        let trailing_comment = if lexer.peek_with_comments().ok() == Some(Token::LineComment) {
+            lexer.eat_one_raw()?;
+            let src = lexer.inner().slice();
+            Some(src)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            ident,
+            trailing_comment,
+        })
     }
 
     fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<(), ParseError> {
