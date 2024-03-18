@@ -5,13 +5,15 @@ use crate::{
 };
 use std::fmt::Write;
 
-use super::{FunctionCall, IfStatement, VarDeclaration};
+use super::{AssignStatement, FunctionCall, IfStatement, ReturnStatement, VarDeclaration};
 
 #[derive(Debug)]
 pub enum BlockItem<'a> {
     Var(VarDeclaration<'a>),
     If(IfStatement<'a>),
     FnCall(FunctionCall<'a>),
+    Return(ReturnStatement<'a>),
+    Assign(AssignStatement<'a>),
 }
 
 #[derive(Debug)]
@@ -34,6 +36,12 @@ impl<'a> DaedalusDisplay for Block<'a> {
                 }
                 BlockItem::FnCall(call) => {
                     call.fmt(f)?;
+                }
+                BlockItem::Return(ret) => {
+                    ret.fmt(f)?;
+                }
+                BlockItem::Assign(assign) => {
+                    assign.fmt(f)?;
                 }
             }
         }
@@ -72,12 +80,24 @@ impl<'a> Block<'a> {
                     items.push(BlockItem::If(IfStatement::parse(lexer)?));
                     continue;
                 }
+                Token::Return => {
+                    items.push(BlockItem::Return(ReturnStatement::parse(lexer)?));
+                    continue;
+                }
                 Token::Ident => {
                     let mut tmp = lexer.clone();
                     tmp.eat_one()?;
-                    if tmp.peek()? == Token::OpenParen {
-                        items.push(BlockItem::FnCall(FunctionCall::parse(lexer)?));
-                        continue;
+
+                    match tmp.peek()? {
+                        Token::OpenParen => {
+                            items.push(BlockItem::FnCall(FunctionCall::parse(lexer)?));
+                            continue;
+                        }
+                        Token::Eq => {
+                            items.push(BlockItem::Assign(AssignStatement::parse(lexer)?));
+                            continue;
+                        }
+                        _ => {}
                     }
                 }
                 _ => {}

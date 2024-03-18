@@ -12,16 +12,19 @@ pub struct IfStatement<'a> {
     pub has_else: bool,
     pub has_if: bool,
     pub block: Block<'a>,
+    pub condition: Option<&'a str>,
     pub next: Option<Box<IfStatement<'a>>>,
 }
 
 impl<'a> DaedalusDisplay for IfStatement<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        if self.has_else && self.has_if {
-            write!(f, " else if() ")?;
-        } else if self.has_if {
-            f.write_indent()?;
-            write!(f, "if() ")?;
+        if let Some(condition) = self.condition {
+            if self.has_else {
+                write!(f, " else if({condition}) ")?;
+            } else {
+                f.write_indent()?;
+                write!(f, "if({condition}) ")?;
+            }
         } else if self.has_else {
             write!(f, " else ")?;
         }
@@ -50,10 +53,12 @@ impl<'a> IfStatement<'a> {
             (false, true)
         };
 
-        if has_if {
+        let condition = if has_if {
             lexer.eat_token(Token::If)?;
-            Self::parse_paren(lexer)?;
-        }
+            Some(Self::parse_paren(lexer)?)
+        } else {
+            None
+        };
 
         let block = Block::parse(lexer)?;
 
@@ -70,12 +75,15 @@ impl<'a> IfStatement<'a> {
             block,
             has_else,
             has_if,
+            condition,
             next,
         })
     }
 
-    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<(), ParseError> {
+    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<&'a str, ParseError> {
         lexer.eat_token(Token::OpenParen)?;
+
+        let start = lexer.span().end;
 
         let mut nest = 1;
         loop {
@@ -94,6 +102,10 @@ impl<'a> IfStatement<'a> {
             }
         }
 
-        Ok(())
+        let end = lexer.span().start;
+
+        let str = lexer.inner().source().get(start..end).unwrap();
+
+        Ok(str)
     }
 }

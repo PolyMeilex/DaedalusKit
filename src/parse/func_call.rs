@@ -8,13 +8,14 @@ use std::fmt::Write;
 #[derive(Debug)]
 pub struct FunctionCall<'a> {
     pub ident: &'a str,
+    pub args: &'a str,
     pub trailing_comment: Option<&'a str>,
 }
 
 impl<'a> DaedalusDisplay for FunctionCall<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         f.write_indent()?;
-        write!(f, "{}();", self.ident)?;
+        write!(f, "{}({});", self.ident, self.args)?;
         if let Some(comment) = self.trailing_comment {
             write!(f, " {}", comment)?;
         }
@@ -27,7 +28,7 @@ impl<'a> FunctionCall<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
         let ident = lexer.eat_ident()?;
 
-        Self::parse_paren(lexer)?;
+        let args = Self::parse_paren(lexer)?;
 
         lexer.eat_token(Token::Semi)?;
 
@@ -41,12 +42,15 @@ impl<'a> FunctionCall<'a> {
 
         Ok(Self {
             ident,
+            args,
             trailing_comment,
         })
     }
 
-    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<(), ParseError> {
+    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<&'a str, ParseError> {
         lexer.eat_token(Token::OpenParen)?;
+
+        let start = lexer.span().end;
 
         let mut nest = 1;
         loop {
@@ -65,6 +69,10 @@ impl<'a> FunctionCall<'a> {
             }
         }
 
-        Ok(())
+        let end = lexer.span().start;
+
+        let str = lexer.inner().source().get(start..end).unwrap();
+
+        Ok(str)
     }
 }

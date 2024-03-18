@@ -15,3 +15,9 @@ pub use if_statement::IfStatement;
 
 mod block;
 pub use block::{Block, BlockItem};
+
+mod return_statement;
+pub use return_statement::ReturnStatement;
+
+mod assign_statement;
+pub use assign_statement::AssignStatement;
