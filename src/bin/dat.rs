@@ -1,7 +1,7 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive as _;
-use properties::{DataType, Properties};
+use properties::{DataType, PropFlag, Properties};
 use std::io::{Cursor, Read, Write};
 
 #[derive(Debug)]
@@ -36,16 +36,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(2);
-                    default.set_type_0(DataType::Func as u32);
-                    default.set_flags(9);
+                    default.set_data_type(DataType::Func);
+                    default.set_flags(PropFlag::CONST | PropFlag::EXTERNAL);
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(0),
-                line_start: properties::LineStart::new(235),
-                line_count: properties::LineCount::new(1),
-                char_start: properties::CharStart::new(0),
-                char_count: properties::CharCount::new(66),
+                file_index: properties::u18::new(0),
+                line_start: properties::u18::new(235),
+                line_count: properties::u18::new(1),
+                char_start: properties::u23::new(0),
+                char_count: properties::u23::new(66),
             },
             data: (-1i32).to_le_bytes().to_vec(),
             parent: -1,
@@ -57,16 +57,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(DataType::Instance as u32);
-                    default.set_flags(0);
+                    default.set_data_type(DataType::Instance);
+                    default.set_flags(PropFlag::empty());
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(0),
-                line_start: properties::LineStart::new(235),
-                line_count: properties::LineCount::new(1),
-                char_start: properties::CharStart::new(31),
-                char_count: properties::CharCount::new(17),
+                file_index: properties::u18::new(0),
+                line_start: properties::u18::new(235),
+                line_count: properties::u18::new(1),
+                char_start: properties::u23::new(31),
+                char_count: properties::u23::new(17),
             },
             data: 0i32.to_le_bytes().to_vec(),
             parent: -1,
@@ -78,16 +78,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(DataType::String as u32);
-                    default.set_flags(0);
+                    default.set_data_type(DataType::String);
+                    default.set_flags(PropFlag::empty());
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(0),
-                line_start: properties::LineStart::new(235),
-                line_count: properties::LineCount::new(1),
-                char_start: properties::CharStart::new(50),
-                char_count: properties::CharCount::new(15),
+                file_index: properties::u18::new(0),
+                line_start: properties::u18::new(235),
+                line_count: properties::u18::new(1),
+                char_start: properties::u23::new(50),
+                char_count: properties::u23::new(15),
             },
             data: vec![],
             parent: -1,
@@ -102,16 +102,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(3);
-                    default.set_type_0(DataType::Class as u32);
-                    default.set_flags(0);
+                    default.set_data_type(DataType::Class);
+                    default.set_flags(PropFlag::empty());
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(1),
-                line_start: properties::LineStart::new(1),
-                line_count: properties::LineCount::new(37),
-                char_start: properties::CharStart::new(1),
-                char_count: properties::CharCount::new(826),
+                file_index: properties::u18::new(1),
+                line_start: properties::u18::new(1),
+                line_count: properties::u18::new(37),
+                char_start: properties::u23::new(1),
+                char_count: properties::u23::new(826),
             },
             data: (288i32).to_le_bytes().to_vec(),
             parent: -1,
@@ -123,16 +123,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(38);
-                    default.set_type_0(DataType::Int as u32);
-                    default.set_flags(4);
+                    default.set_data_type(DataType::Int);
+                    default.set_flags(PropFlag::CLASS_VAR);
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(1),
-                line_start: properties::LineStart::new(9),
-                line_count: properties::LineCount::new(1),
-                char_start: properties::CharStart::new(12),
-                char_count: properties::CharCount::new(8),
+                file_index: properties::u18::new(1),
+                line_start: properties::u18::new(9),
+                line_count: properties::u18::new(1),
+                char_start: properties::u23::new(12),
+                char_count: properties::u23::new(8),
             },
             data: vec![],
             parent: 4,
@@ -144,16 +144,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(8);
-                    default.set_type_0(DataType::Int as u32);
-                    default.set_flags(4);
+                    default.set_data_type(DataType::Int);
+                    default.set_flags(PropFlag::CLASS_VAR);
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(1),
-                line_start: properties::LineStart::new(10),
-                line_count: properties::LineCount::new(1),
-                char_start: properties::CharStart::new(12),
-                char_count: properties::CharCount::new(9),
+                file_index: properties::u18::new(1),
+                line_start: properties::u18::new(10),
+                line_count: properties::u18::new(1),
+                char_start: properties::u23::new(12),
+                char_count: properties::u23::new(9),
             },
             data: vec![],
             parent: 4,
@@ -165,16 +165,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(154);
-                    default.set_type_0(DataType::Int as u32);
-                    default.set_flags(4);
+                    default.set_data_type(DataType::Int);
+                    default.set_flags(PropFlag::CLASS_VAR);
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(1),
-                line_start: properties::LineStart::new(11),
-                line_count: properties::LineCount::new(1),
-                char_start: properties::CharStart::new(12),
-                char_count: properties::CharCount::new(8),
+                file_index: properties::u18::new(1),
+                line_start: properties::u18::new(11),
+                line_count: properties::u18::new(1),
+                char_start: properties::u23::new(12),
+                char_count: properties::u23::new(8),
             },
             data: vec![],
             parent: 4,
@@ -189,16 +189,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(DataType::Instance as u32);
-                    default.set_flags(1);
+                    default.set_data_type(DataType::Instance);
+                    default.set_flags(PropFlag::CONST);
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(1),
-                line_start: properties::LineStart::new(61),
-                line_count: properties::LineCount::new(5),
-                char_start: properties::CharStart::new(0),
-                char_count: properties::CharCount::new(111),
+                file_index: properties::u18::new(1),
+                line_start: properties::u18::new(61),
+                line_count: properties::u18::new(5),
+                char_start: properties::u23::new(0),
+                char_count: properties::u23::new(111),
             },
             data: 0i32.to_le_bytes().to_vec(),
             parent: 4,
@@ -213,16 +213,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(DataType::Func as u32);
-                    default.set_flags(1);
+                    default.set_data_type(DataType::Func);
+                    default.set_flags(PropFlag::CONST);
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(1),
-                line_start: properties::LineStart::new(67),
-                line_count: properties::LineCount::new(1),
-                char_start: properties::CharStart::new(0),
-                char_count: properties::CharCount::new(29),
+                file_index: properties::u18::new(1),
+                line_start: properties::u18::new(67),
+                line_count: properties::u18::new(1),
+                char_start: properties::u23::new(0),
+                char_count: properties::u23::new(29),
             },
             data: 0x27_i32.to_le_bytes().to_vec(),
             parent: -1,
@@ -237,16 +237,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(DataType::Func as u32);
-                    default.set_flags(1);
+                    default.set_data_type(DataType::Func);
+                    default.set_flags(PropFlag::CONST);
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(1),
-                line_start: properties::LineStart::new(68),
-                line_count: properties::LineCount::new(1),
-                char_start: properties::CharStart::new(0),
-                char_count: properties::CharCount::new(26),
+                file_index: properties::u18::new(1),
+                line_start: properties::u18::new(68),
+                line_count: properties::u18::new(1),
+                char_start: properties::u23::new(0),
+                char_count: properties::u23::new(26),
             },
             data: 0x28_i32.to_le_bytes().to_vec(),
             parent: -1,
@@ -261,16 +261,16 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(1);
-                    default.set_type_0(DataType::String as u32);
-                    default.set_flags(1);
+                    default.set_data_type(DataType::String);
+                    default.set_flags(PropFlag::CONST);
                     default.set_space(1);
                     default
                 },
-                file_index: properties::FileIndex::new(1),
-                line_start: properties::LineStart::new(64),
-                line_count: properties::LineCount::new(1),
-                char_start: properties::CharStart::new(23),
-                char_count: properties::CharCount::new(12),
+                file_index: properties::u18::new(1),
+                line_start: properties::u18::new(64),
+                line_count: properties::u18::new(1),
+                char_start: properties::u23::new(23),
+                char_count: properties::u23::new(12),
             },
             data: b"HUMANS.MDS\n".to_vec(),
             parent: -1,
@@ -287,8 +287,8 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(1);
-                    default.set_type_0(DataType::Instance as u32);
-                    default.set_flags(0);
+                    default.set_data_type(DataType::Instance);
+                    default.set_flags(PropFlag::empty());
                     default.set_space(1);
                     default
                 },
@@ -398,11 +398,8 @@ impl DatBuilder {
             out.write_u32::<LittleEndian>(1).unwrap();
             out.write_all(&symbol.name).unwrap();
 
-            let props = &symbol.props as *const _ as *const u8;
-            let props =
-                unsafe { std::slice::from_raw_parts(props, std::mem::size_of::<Properties>()) };
+            symbol.props.encode(&mut out).unwrap();
 
-            out.write_all(props).unwrap();
             out.write_all(&symbol.data).unwrap();
             out.write_i32::<LittleEndian>(symbol.parent).unwrap();
         }
@@ -472,20 +469,18 @@ fn run(data: Vec<u8>) {
             println!("- ?");
         }
 
-        let mut buf = [0; std::mem::size_of::<properties::Properties>()];
-        data.read_exact(&mut buf).unwrap();
-        let props: properties::Properties = unsafe { std::mem::transmute(buf) };
+        let props = properties::Properties::decode(&mut data).unwrap();
         println!("{props:#?}");
 
         println!("    sym_index: {sym_index} 0x{sym_index:x?}");
 
         // dbg!(&props);
 
-        let flags = props.elem_props.flags2();
+        let flags = props.elem_props.flags();
 
         if !flags.contains(properties::PropFlag::CLASS_VAR) {
             use properties::*;
-            match DataType::from_u32(props.elem_props.type_0()).unwrap() {
+            match props.elem_props.data_type() {
                 DataType::Float => {
                     let count = props.elem_props.count() as usize;
                     let mut buf = vec![0; std::mem::size_of::<f32>() * count];
@@ -602,9 +597,9 @@ mod properties {
     #![allow(dead_code)]
 
     use super::*;
-    use c2rust_bitfields::BitfieldStruct;
 
     bitflags::bitflags! {
+        #[derive(Debug, Clone, Copy)]
         pub struct PropFlag: u32 {
             const CONST = 1 << 0;
             const RETURN = 1 << 1;
@@ -627,32 +622,155 @@ mod properties {
         Instance = 7,
     }
 
+    type BitRange = (usize, usize);
+
+    fn set_field(field: &mut [u8], int: u32, bit_range: BitRange) {
+        fn zero_bit(byte: &mut u8, n_bit: u64) {
+            let bit = 1 << n_bit;
+            *byte &= !bit as u8;
+        }
+
+        fn one_bit(byte: &mut u8, n_bit: u64) {
+            let bit = 1 << n_bit;
+            *byte |= bit as u8;
+        }
+
+        fn get_bit(int: u32, bit: usize) -> bool {
+            ((int >> bit) & 1) == 1
+        }
+
+        let (lhs_bit, rhs_bit) = bit_range;
+
+        for (i, bit_index) in (lhs_bit..=rhs_bit).enumerate() {
+            let byte_index = bit_index / 8;
+            let byte = &mut field[byte_index];
+
+            if get_bit(int, i) {
+                one_bit(byte, (bit_index % 8) as u64);
+            } else {
+                zero_bit(byte, (bit_index % 8) as u64);
+            }
+        }
+    }
+
+    fn get_field(field: &[u8], bit_range: (usize, usize)) -> u32 {
+        let (lhs_bit, rhs_bit) = bit_range;
+        let mut val = 0;
+
+        for (i, bit_index) in (lhs_bit..=rhs_bit).enumerate() {
+            let byte_index = bit_index / 8;
+            let byte = field[byte_index];
+            let bit = 1 << (bit_index % 8);
+            let read_bit = byte & bit;
+
+            if read_bit != 0 {
+                let write_bit = 1 << i;
+                val |= write_bit;
+            }
+        }
+
+        val
+    }
+
     #[derive(Debug, Default, Copy, Clone)]
-    #[repr(C)]
     pub struct Properties {
         pub off_cls_ret: i32,
         pub elem_props: ElemProps,
-        pub file_index: FileIndex,
-        pub line_start: LineStart,
-        pub line_count: LineCount,
-        pub char_start: CharStart,
-        pub char_count: CharCount,
+        pub file_index: u18,
+        pub line_start: u18,
+        pub line_count: u18,
+        pub char_start: u23,
+        pub char_count: u23,
     }
 
-    #[derive(Default, Copy, Clone, BitfieldStruct)]
-    #[repr(C)]
-    pub struct ElemProps {
-        #[bitfield(name = "count", ty = "u32", bits = "0..=11")]
-        #[bitfield(name = "type_0", ty = "u32", bits = "12..=15")]
-        #[bitfield(name = "flags", ty = "u32", bits = "16..=21")]
-        #[bitfield(name = "space", ty = "u32", bits = "22..=22")]
-        #[bitfield(name = "reserved", ty = "u32", bits = "23..=31")]
-        pub count_type_0_flags_space_reserved: [u8; 4],
+    impl Properties {
+        pub fn decode(mut r: impl Read) -> std::io::Result<Self> {
+            let mut this = Self {
+                off_cls_ret: r.read_i32::<LittleEndian>()?,
+                ..Default::default()
+            };
+
+            r.read_exact(&mut this.elem_props.0)?;
+
+            r.read_exact(&mut this.file_index.0)?;
+
+            r.read_exact(&mut this.line_start.0)?;
+            r.read_exact(&mut this.line_count.0)?;
+
+            r.read_exact(&mut this.char_start.0)?;
+            r.read_exact(&mut this.char_count.0)?;
+
+            Ok(this)
+        }
+
+        pub fn encode(&self, mut w: impl Write) -> std::io::Result<()> {
+            w.write_i32::<LittleEndian>(self.off_cls_ret)?;
+            w.write_all(&self.elem_props.0)?;
+
+            w.write_all(&self.file_index.0)?;
+
+            w.write_all(&self.line_start.0)?;
+            w.write_all(&self.line_count.0)?;
+
+            w.write_all(&self.char_start.0)?;
+            w.write_all(&self.char_count.0)?;
+
+            Ok(())
+        }
     }
+
+    #[derive(Default, Copy, Clone)]
+    pub struct ElemProps([u8; 4]);
 
     impl ElemProps {
-        pub fn flags2(&self) -> PropFlag {
-            PropFlag::from_bits_retain(self.flags())
+        const COUNT: BitRange = (0, 11);
+        const DATA_TYPE: BitRange = (12, 15);
+        const FLAGS: BitRange = (16, 21);
+        const SPACE: BitRange = (22, 22);
+        const RESERVED: BitRange = (23, 31);
+
+        fn set_field(&mut self, int: u32, bit_range: BitRange) {
+            set_field(&mut self.0, int, bit_range)
+        }
+
+        fn get_field(&self, bit_range: BitRange) -> u32 {
+            get_field(&self.0, bit_range)
+        }
+
+        pub fn set_count(&mut self, int: u32) {
+            self.set_field(int, Self::COUNT);
+        }
+
+        pub fn count(&self) -> u32 {
+            self.get_field(Self::COUNT)
+        }
+
+        pub fn set_data_type(&mut self, ty: DataType) {
+            self.set_field(ty as u32, Self::DATA_TYPE);
+        }
+
+        pub fn data_type(&self) -> DataType {
+            DataType::from_u32(self.get_field(Self::DATA_TYPE)).unwrap()
+        }
+
+        pub fn set_flags(&mut self, flags: PropFlag) {
+            self.set_field(flags.bits(), Self::FLAGS);
+        }
+
+        pub fn flags(&self) -> PropFlag {
+            PropFlag::from_bits_retain(self.get_field(Self::FLAGS))
+        }
+
+        pub fn set_space(&mut self, int: u32) {
+            self.set_field(int, Self::SPACE);
+        }
+
+        pub fn space(&self) -> u32 {
+            self.get_field(Self::SPACE)
+        }
+
+        pub fn reserved(&self) -> u32 {
+            self.get_field(Self::RESERVED)
         }
     }
 
@@ -660,22 +778,35 @@ mod properties {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("ElemProps")
                 .field("count", &self.count())
-                .field("type_0", &self.type_0())
+                .field("data_type", &self.data_type())
                 .field("flags", &self.flags())
                 .field("space", &self.space())
                 .finish()
         }
     }
 
-    #[derive(Default, Copy, Clone, BitfieldStruct)]
-    #[repr(C)]
-    pub struct FileIndex {
-        #[bitfield(name = "value", ty = "u32", bits = "0..=18")]
-        #[bitfield(name = "reserved", ty = "u32", bits = "19..=31")]
-        pub value_reserved: [u8; 4],
+    #[derive(Default, Copy, Clone)]
+    #[allow(non_camel_case_types)]
+    pub struct u18([u8; 4]);
+
+    impl u18 {
+        const VALUE: BitRange = (0, 18);
+        const RESERVED: BitRange = (19, 31);
+
+        pub fn set_value(&mut self, int: u32) {
+            set_field(&mut self.0, int, Self::VALUE)
+        }
+
+        pub fn value(&self) -> u32 {
+            get_field(&self.0, Self::VALUE)
+        }
+
+        pub fn reserved(&self) -> u32 {
+            get_field(&self.0, Self::RESERVED)
+        }
     }
 
-    impl FileIndex {
+    impl u18 {
         pub fn new(id: u32) -> Self {
             let mut this = Self::default();
             this.set_value(id);
@@ -683,95 +814,40 @@ mod properties {
         }
     }
 
-    impl std::fmt::Debug for FileIndex {
+    impl std::fmt::Debug for u18 {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "{}", self.value())
         }
     }
 
-    #[derive(Default, Copy, Clone, BitfieldStruct)]
-    #[repr(C)]
-    pub struct LineStart {
-        #[bitfield(name = "value", ty = "u32", bits = "0..=18")]
-        #[bitfield(name = "reserved", ty = "u32", bits = "19..=31")]
-        pub value_reserved: [u8; 4],
-    }
+    #[derive(Default, Copy, Clone)]
+    #[allow(non_camel_case_types)]
+    pub struct u23([u8; 4]);
 
-    impl LineStart {
+    impl u23 {
         pub fn new(id: u32) -> Self {
             let mut this = Self::default();
             this.set_value(id);
             this
         }
-    }
 
-    impl std::fmt::Debug for LineStart {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.value())
+        const VALUE: BitRange = (0, 23);
+        const RESERVED: BitRange = (24, 31);
+
+        pub fn set_value(&mut self, int: u32) {
+            set_field(&mut self.0, int, Self::VALUE)
+        }
+
+        pub fn value(&self) -> u32 {
+            get_field(&self.0, Self::VALUE)
+        }
+
+        pub fn reserved(&self) -> u32 {
+            get_field(&self.0, Self::RESERVED)
         }
     }
 
-    #[derive(Default, Copy, Clone, BitfieldStruct)]
-    #[repr(C)]
-    pub struct LineCount {
-        #[bitfield(name = "value", ty = "u32", bits = "0..=18")]
-        #[bitfield(name = "reserved", ty = "u32", bits = "19..=31")]
-        pub value_reserved: [u8; 4],
-    }
-
-    impl LineCount {
-        pub fn new(id: u32) -> Self {
-            let mut this = Self::default();
-            this.set_value(id);
-            this
-        }
-    }
-
-    impl std::fmt::Debug for LineCount {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.value())
-        }
-    }
-
-    #[derive(Default, Copy, Clone, BitfieldStruct)]
-    #[repr(C)]
-    pub struct CharStart {
-        #[bitfield(name = "value", ty = "u32", bits = "0..=23")]
-        #[bitfield(name = "reserved", ty = "u32", bits = "24..=31")]
-        pub value_reserved: [u8; 4],
-    }
-
-    impl CharStart {
-        pub fn new(id: u32) -> Self {
-            let mut this = Self::default();
-            this.set_value(id);
-            this
-        }
-    }
-
-    impl std::fmt::Debug for CharStart {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.value())
-        }
-    }
-
-    #[derive(Default, Copy, Clone, BitfieldStruct)]
-    #[repr(C)]
-    pub struct CharCount {
-        #[bitfield(name = "value", ty = "u32", bits = "0..=23")]
-        #[bitfield(name = "reserved", ty = "u32", bits = "24..=31")]
-        pub value_reserved: [u8; 4],
-    }
-
-    impl CharCount {
-        pub fn new(id: u32) -> Self {
-            let mut this = Self::default();
-            this.set_value(id);
-            this
-        }
-    }
-
-    impl std::fmt::Debug for CharCount {
+    impl std::fmt::Debug for u23 {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "{}", self.value())
         }
