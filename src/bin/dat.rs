@@ -1,12 +1,8 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive as _;
-use properties::{
-    Properties, EPAR_TYPE_CLASS, EPAR_TYPE_INSTANCE, EPAR_TYPE_INT, EPAR_TYPE_STRING,
-};
+use properties::{DataType, Properties};
 use std::io::{Cursor, Read, Write};
-
-use crate::properties::EPAR_TYPE_FUNC;
 
 #[derive(Debug)]
 struct DatSymbol {
@@ -40,7 +36,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(2);
-                    default.set_type_0(EPAR_TYPE_FUNC);
+                    default.set_type_0(DataType::Func as u32);
                     default.set_flags(9);
                     default.set_space(1);
                     default
@@ -61,7 +57,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(EPAR_TYPE_INSTANCE);
+                    default.set_type_0(DataType::Instance as u32);
                     default.set_flags(0);
                     default.set_space(1);
                     default
@@ -82,7 +78,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(EPAR_TYPE_STRING);
+                    default.set_type_0(DataType::String as u32);
                     default.set_flags(0);
                     default.set_space(1);
                     default
@@ -106,7 +102,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(3);
-                    default.set_type_0(EPAR_TYPE_CLASS);
+                    default.set_type_0(DataType::Class as u32);
                     default.set_flags(0);
                     default.set_space(1);
                     default
@@ -127,7 +123,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(38);
-                    default.set_type_0(EPAR_TYPE_INT);
+                    default.set_type_0(DataType::Int as u32);
                     default.set_flags(4);
                     default.set_space(1);
                     default
@@ -148,7 +144,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(8);
-                    default.set_type_0(EPAR_TYPE_INT);
+                    default.set_type_0(DataType::Int as u32);
                     default.set_flags(4);
                     default.set_space(1);
                     default
@@ -169,7 +165,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(154);
-                    default.set_type_0(EPAR_TYPE_INT);
+                    default.set_type_0(DataType::Int as u32);
                     default.set_flags(4);
                     default.set_space(1);
                     default
@@ -193,7 +189,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(EPAR_TYPE_INSTANCE);
+                    default.set_type_0(DataType::Instance as u32);
                     default.set_flags(1);
                     default.set_space(1);
                     default
@@ -217,7 +213,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(EPAR_TYPE_FUNC);
+                    default.set_type_0(DataType::Func as u32);
                     default.set_flags(1);
                     default.set_space(1);
                     default
@@ -241,7 +237,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(0);
-                    default.set_type_0(EPAR_TYPE_FUNC);
+                    default.set_type_0(DataType::Func as u32);
                     default.set_flags(1);
                     default.set_space(1);
                     default
@@ -265,7 +261,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(1);
-                    default.set_type_0(EPAR_TYPE_STRING);
+                    default.set_type_0(DataType::String as u32);
                     default.set_flags(1);
                     default.set_space(1);
                     default
@@ -291,7 +287,7 @@ impl DatBuilder {
                 elem_props: {
                     let mut default = properties::ElemProps::default();
                     default.set_count(1);
-                    default.set_type_0(EPAR_TYPE_INSTANCE);
+                    default.set_type_0(DataType::Instance as u32);
                     default.set_flags(0);
                     default.set_space(1);
                     default
@@ -485,10 +481,12 @@ fn run(data: Vec<u8>) {
 
         // dbg!(&props);
 
-        if (props.elem_props.flags() & properties::EPAR_FLAG_CLASS_VAR) == 0 {
+        let flags = props.elem_props.flags2();
+
+        if !flags.contains(properties::PropFlag::CLASS_VAR) {
             use properties::*;
-            match props.elem_props.type_0() {
-                EPAR_TYPE_FLOAT => {
+            match DataType::from_u32(props.elem_props.type_0()).unwrap() {
+                DataType::Float => {
                     let count = props.elem_props.count() as usize;
                     let mut buf = vec![0; std::mem::size_of::<f32>() * count];
                     data.read_exact(&mut buf).unwrap();
@@ -498,7 +496,7 @@ fn run(data: Vec<u8>) {
                         println!("    float: {int}");
                     }
                 }
-                EPAR_TYPE_INT => {
+                DataType::Int => {
                     let count = props.elem_props.count() as usize;
                     let mut buf = vec![0; std::mem::size_of::<u32>() * count];
                     data.read_exact(&mut buf).unwrap();
@@ -508,7 +506,7 @@ fn run(data: Vec<u8>) {
                         println!("    int: {int}");
                     }
                 }
-                EPAR_TYPE_STRING => {
+                DataType::String => {
                     let count = props.elem_props.count() as usize;
                     for _ in 0..count {
                         let mut string = Vec::new();
@@ -526,34 +524,32 @@ fn run(data: Vec<u8>) {
                         println!("    string: {string:?}");
                     }
                 }
-                EPAR_TYPE_CLASS => {
+                DataType::Class => {
                     let class_offset = data.read_i32::<LittleEndian>().unwrap();
                     println!("    class_offset: {class_offset} 0x{class_offset:x?}");
                 }
-                EPAR_TYPE_FUNC => {
+                DataType::Func => {
                     let address = data.read_i32::<LittleEndian>().unwrap();
                     println!("    func_address: {address} 0x{address:x?}");
-                    if (props.elem_props.flags() & EPAR_FLAG_EXTERNAL) != 0 {
-                        println!("    external_address: {address}");
+                    if flags.contains(PropFlag::EXTERNAL) {
+                        println!("    external: true");
                     }
                 }
-                EPAR_TYPE_PROTOTYPE => {
+                DataType::Prototype => {
                     let address = data.read_i32::<LittleEndian>().unwrap();
                     println!("    prototype_address: {address}");
-                    if (props.elem_props.flags() & EPAR_FLAG_EXTERNAL) != 0 {
-                        println!("    external_address: {address}");
+                    if flags.contains(PropFlag::EXTERNAL) {
+                        println!("    external: true");
                     }
                 }
-                EPAR_TYPE_INSTANCE => {
+                DataType::Instance => {
                     let address = data.read_i32::<LittleEndian>().unwrap();
                     println!("    instance_address: {address} 0x{address:x?}");
-                    if (props.elem_props.flags() & EPAR_FLAG_EXTERNAL) != 0 {
-                        println!("    external_address: {address}");
+                    if flags.contains(PropFlag::EXTERNAL) {
+                        println!("    external: true");
                     }
                 }
-                _ => {
-                    todo!()
-                }
+                DataType::Void => {}
             }
         } else {
             println!("    EPAR_FLAG_CLASS_VAR: true");
@@ -605,22 +601,31 @@ fn run(data: Vec<u8>) {
 mod properties {
     #![allow(dead_code)]
 
+    use super::*;
     use c2rust_bitfields::BitfieldStruct;
 
-    pub const EPAR_FLAG_CONST: u32 = 1 << 0;
-    pub const EPAR_FLAG_RETURN: u32 = 1 << 1;
-    pub const EPAR_FLAG_CLASS_VAR: u32 = 1 << 2;
-    pub const EPAR_FLAG_EXTERNAL: u32 = 1 << 3;
-    pub const EPAR_FLAG_MERGED: u32 = 1 << 4;
+    bitflags::bitflags! {
+        pub struct PropFlag: u32 {
+            const CONST = 1 << 0;
+            const RETURN = 1 << 1;
+            const CLASS_VAR = 1 << 2;
+            const EXTERNAL = 1 << 3;
+            const MERGED = 1 << 4;
+        }
+    }
 
-    pub const EPAR_TYPE_VOID: u32 = 0;
-    pub const EPAR_TYPE_FLOAT: u32 = 1;
-    pub const EPAR_TYPE_INT: u32 = 2;
-    pub const EPAR_TYPE_STRING: u32 = 3;
-    pub const EPAR_TYPE_CLASS: u32 = 4;
-    pub const EPAR_TYPE_FUNC: u32 = 5;
-    pub const EPAR_TYPE_PROTOTYPE: u32 = 6;
-    pub const EPAR_TYPE_INSTANCE: u32 = 7;
+    #[repr(u32)]
+    #[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive)]
+    pub enum DataType {
+        Void = 0,
+        Float = 1,
+        Int = 2,
+        String = 3,
+        Class = 4,
+        Func = 5,
+        Prototype = 6,
+        Instance = 7,
+    }
 
     #[derive(Debug, Default, Copy, Clone)]
     #[repr(C)]
@@ -643,6 +648,12 @@ mod properties {
         #[bitfield(name = "space", ty = "u32", bits = "22..=22")]
         #[bitfield(name = "reserved", ty = "u32", bits = "23..=31")]
         pub count_type_0_flags_space_reserved: [u8; 4],
+    }
+
+    impl ElemProps {
+        pub fn flags2(&self) -> PropFlag {
+            PropFlag::from_bits_retain(self.flags())
+        }
     }
 
     impl std::fmt::Debug for ElemProps {
