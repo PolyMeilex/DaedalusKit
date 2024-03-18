@@ -1,4 +1,6 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive as _;
 use properties::{
     Properties, EPAR_TYPE_CLASS, EPAR_TYPE_INSTANCE, EPAR_TYPE_INT, EPAR_TYPE_STRING,
 };
@@ -18,7 +20,7 @@ struct DatSymbol {
 struct DatBuilder {
     symbols: Vec<DatSymbol>,
     sort_idx: Vec<u32>,
-    instructions: Vec<u8>,
+    bytecode: Vec<u8>,
 }
 
 impl DatBuilder {
@@ -26,7 +28,7 @@ impl DatBuilder {
         Self {
             symbols: Vec::new(),
             sort_idx: Vec::new(),
-            instructions: Vec::new(),
+            bytecode: Vec::new(),
         }
     }
 
@@ -320,25 +322,69 @@ impl DatBuilder {
         dat.sort_idx.push(11);
         dat.sort_idx.push(0);
 
-        // dat.push_return(); // 00
-        // dat.push_return(); // 01
-        // dat.push_return(); // 02
-
-        dat.instructions = vec![
-            0x40, 0x28, 0x0, 0x0, 0x0, 0x41, 0x6, 0x0, 0x0, 0x0, 0x9, 0x40, 0x28, 0x0, 0x0, 0x0,
-            0xf5, 0x6, 0x0, 0x0, 0x0, 0x1, 0x9, 0x43, 0x8, 0x0, 0x0, 0x0, 0x41, 0xb, 0x0, 0x0, 0x0,
-            0x3e, 0x1, 0x0, 0x0, 0x0, 0x3c, 0x3c, 0x3c,
+        let instructions = vec![
+            Instruction {
+                opcode: Opcode::PushI,
+                data: InstructionData::Immediate(40),
+            },
+            Instruction {
+                opcode: Opcode::PushV,
+                data: InstructionData::Symbol(6),
+            },
+            Instruction {
+                opcode: Opcode::MovI,
+                data: InstructionData::None,
+            },
+            Instruction {
+                opcode: Opcode::PushI,
+                data: InstructionData::Immediate(40),
+            },
+            Instruction {
+                opcode: Opcode::PushVV,
+                data: InstructionData::SymbolIndex {
+                    symbol: 6,
+                    index: 1,
+                },
+            },
+            Instruction {
+                opcode: Opcode::MovI,
+                data: InstructionData::None,
+            },
+            Instruction {
+                opcode: Opcode::PushVI,
+                data: InstructionData::Symbol(8),
+            },
+            Instruction {
+                opcode: Opcode::PushV,
+                data: InstructionData::Symbol(11),
+            },
+            Instruction {
+                opcode: Opcode::Be,
+                data: InstructionData::Symbol(1),
+            },
+            Instruction {
+                opcode: Opcode::Rsr,
+                data: InstructionData::None,
+            },
+            Instruction {
+                opcode: Opcode::Rsr,
+                data: InstructionData::None,
+            },
+            Instruction {
+                opcode: Opcode::Rsr,
+                data: InstructionData::None,
+            },
         ];
+
+        for i in instructions {
+            i.encode(&mut dat.bytecode).unwrap();
+        }
 
         dat
     }
 
     pub fn push_symbol(&mut self, symbol: DatSymbol) {
         self.symbols.push(symbol);
-    }
-
-    pub fn push_return(&mut self) {
-        self.instructions.push(0x3c);
     }
 
     pub fn build(&self) -> Vec<u8> {
@@ -365,10 +411,10 @@ impl DatBuilder {
             out.write_i32::<LittleEndian>(symbol.parent).unwrap();
         }
 
-        out.write_u32::<LittleEndian>(self.instructions.len() as u32)
+        out.write_u32::<LittleEndian>(self.bytecode.len() as u32)
             .unwrap();
 
-        out.write_all(&self.instructions).unwrap();
+        out.write_all(&self.bytecode).unwrap();
 
         out
     }
@@ -538,6 +584,21 @@ fn run(data: Vec<u8>) {
     }
 
     println!();
+
+    let mut addr = 0;
+    let mut bytecode = Cursor::new(bytecode);
+
+    loop {
+        let i = Instruction::decode(&mut bytecode).unwrap();
+        println!("{i:?}");
+        addr += i.size();
+
+        if addr >= bytecode_size {
+            break;
+        }
+    }
+
+    println!();
 }
 
 // TODO: Replace with just regular manual parsing
@@ -704,4 +765,223 @@ mod properties {
             write!(f, "{}", self.value())
         }
     }
+}
+
+#[derive(Debug)]
+pub struct Instruction {
+    opcode: Opcode,
+    data: InstructionData,
+}
+
+impl Instruction {
+    fn decode(mut r: impl Read) -> std::io::Result<Self> {
+        let opcode = Opcode::from_u8(r.read_u8()?).unwrap();
+        let data = match opcode {
+            Opcode::Bl | Opcode::Bz | Opcode::B => {
+                let a = r.read_u32::<LittleEndian>()?;
+                InstructionData::Address(a)
+            }
+            Opcode::PushI => {
+                let i = r.read_i32::<LittleEndian>()?;
+                InstructionData::Immediate(i)
+            }
+            Opcode::Be | Opcode::PushV | Opcode::PushVI | Opcode::GMovI => {
+                let s = r.read_u32::<LittleEndian>()?;
+                InstructionData::Symbol(s)
+            }
+            Opcode::PushVV => {
+                let symbol = r.read_u32::<LittleEndian>()?;
+                let index = r.read_u8()?;
+                InstructionData::SymbolIndex { symbol, index }
+            }
+            _ => InstructionData::None,
+        };
+
+        Ok(Self { opcode, data })
+    }
+
+    fn encode(&self, mut w: impl Write) -> std::io::Result<usize> {
+        w.write_u8(self.opcode as u8)?;
+        match self.data {
+            InstructionData::Address(i) | InstructionData::Symbol(i) => {
+                w.write_u32::<LittleEndian>(i)?;
+            }
+            InstructionData::Immediate(i) => {
+                w.write_i32::<LittleEndian>(i)?;
+            }
+            InstructionData::SymbolIndex { symbol, index } => {
+                w.write_u32::<LittleEndian>(symbol)?;
+                w.write_u8(index)?;
+            }
+            InstructionData::None => {}
+        }
+        Ok(self.size())
+    }
+
+    pub fn size(&self) -> usize {
+        let data_size = match self.data {
+            InstructionData::Address(_) => std::mem::size_of::<u32>(),
+            InstructionData::Immediate(_) => std::mem::size_of::<u32>(),
+            InstructionData::Symbol(_) => std::mem::size_of::<u32>(),
+            InstructionData::SymbolIndex { .. } => {
+                std::mem::size_of::<u32>() + std::mem::size_of::<u8>()
+            }
+            InstructionData::None => 0,
+        };
+
+        std::mem::size_of::<u8>() + data_size
+    }
+}
+
+#[derive(Debug)]
+pub enum InstructionData {
+    Address(u32),
+    Immediate(i32),
+    Symbol(u32),
+    SymbolIndex { symbol: u32, index: u8 },
+    None,
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive)]
+enum Opcode {
+    /// Add `a` and `b` and put the result back onto the stack.
+    Add = 0,
+
+    /// Subtract `b` from `a` and put the result back onto the stack.
+    Sub = 1,
+
+    /// Multiply `a` and `b` and put the result back onto the stack.
+    Mul = 2,
+
+    /// Divide `a` by `b` and put the result back onto the stack.
+    Div = 3,
+
+    /// Divide `a` by `b` and put the remainder back onto the stack.
+    Mod = 4,
+
+    /// Compute the bitwise or of `a` and `b` and put the result back onto the stack.
+    Or = 5,
+
+    /// Compute the bitwise and of `a` and `b` and put the result back onto the stack.
+    /// a & b
+    AndB = 6,
+
+    /// Test if `a` is less than `b` and put `1` or `0` onto the stack if
+    /// the test is true or false respectively.
+    Lt = 7,
+
+    /// Test if `a` is greater than `b` and put `1` or `0` onto the stack
+    /// if the test is true or false respectively.
+    Gt = 8,
+
+    /// Write `b` to `x` as an integer.
+    MovI = 9,
+
+    /// Test if `a == 1` or `b == 1` and put `1` or `0` onto the stack if
+    /// the test is true or false respectively.
+    Orr = 11,
+
+    /// Test if `a == 1` and `b == 1` and put `1` or `0` onto the stack if
+    /// the test is true or false respectively.
+    And = 12,
+
+    /// Left shift  `a` by `b` bits and put the result back onto the stack.
+    Lsl = 13,
+
+    /// Right shift  `a` by `b` bits and put the result back onto the stack.
+    Lsr = 14,
+
+    /// Test if `a` is less than or equal to `b` and put `1` or `0` onto the
+    /// stack if the test is true or false respectively.
+    Lte = 15,
+
+    /// Test if `a` is equal to `b` and put `1` or `0` onto the
+    /// stack if the test is true or false respectively.
+    Eq = 16,
+
+    /// Test if `a` is not equal to `b` and put `1` or `0` onto the
+    /// stack if the test is true or false respectively.
+    Neq = 17,
+
+    /// Test if `a` is greater than or equal to `b` and put `1` or `0` onto the
+    /// stack if the test is true or false respectively.
+    Gte = 18,
+
+    /// Add `x` and `b` and assign the result back to `x`.
+    /// `x` must be a reference to an integer.
+    AddMovI = 19,
+
+    /// Subtract `b` from `x` and assign the result back to `x`.
+    /// `x` must be a reference to an integer.
+    SubMovI = 20,
+
+    /// Multiply `x` from `b` and assign the result back to `x`.
+    /// `x` must be a reference to an integer.
+    MulMovI = 21,
+
+    /// Divide `x` by `b` and assign the result back to `x`.
+    /// `x` must be a reference to an integer.
+    DivMovI = 22,
+
+    /// Compute `+a` and put the result back onto the stack.
+    Plus = 30,
+
+    /// Compute `-a` and put the result back onto the stack.
+    Negate = 31,
+
+    /// Compute `!a` and put the result back onto the stack.
+    Not = 32,
+
+    /// Compute the bitwise complement `a` and put the result back onto the stack.
+    Cmpl = 33,
+
+    /// Do nothing.
+    Nop = 45,
+
+    /// Return from the currently running function
+    Rsr = 60,
+
+    /// Call the function at the address provided in the instruction.
+    Bl = 61,
+
+    /// Call the external function at the symbol index provided in the instruction.
+    Be = 62,
+
+    /// Push the immediate value provided in the instruction onto the stack as an integer.
+    PushI = 64,
+
+    /// Push the symbol with the index provided in the instruction onto the stack as a reference.
+    PushV = 65,
+
+    /// Push the instance with the symbol index provided in the instruction onto the stack as a reference.
+    PushVI = 67,
+
+    /// Write `m` to `x` as a string.
+    MovS = 70,
+
+    /// Write `m` to `x` as a string reference; not implemented.
+    MovSs = 71,
+
+    /// Write `b` to `x` as a function reference.
+    MovVF = 72,
+
+    /// Write `b` to `x` as a floating point number.
+    MovF = 73,
+
+    /// Write `y` to `x` as an instance reference.
+    MovVI = 74,
+
+    /// Immediately jump to the instruction at the address provided in the instruction.
+    B = 75,
+
+    /// Jump to the instruction at the address provided in the instruction if `a == 0`.
+    Bz = 76,
+
+    /// Set the global instance reference to the instance with the symbol index provided in the instruction.
+    GMovI = 80,
+
+    /// Push the element at the given index of the symbol with the index provided in the
+    /// instruction onto the stack as a reference.
+    PushVV = 245,
 }
