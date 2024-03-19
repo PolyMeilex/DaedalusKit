@@ -1,9 +1,10 @@
-[package]
-name = "daedalus-kit"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+resolver = "2"
+members = ["bytecode", "dat", "parser"]
 
-[dependencies]
+[workspace.dependencies]
+bytecode = { path = "./bytecode" }
+
 bitflags = "2.4.2"
 bstr = "1.9.1"
 byteorder = "1.5.0"

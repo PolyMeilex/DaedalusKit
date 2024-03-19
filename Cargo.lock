@@ -32,6 +32,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bytecode"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "num-derive",
+ "num-traits",
+]
+
+[[package]]
 name = "byteorder"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -54,18 +63,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "daedalus-kit"
+name = "dat"
 version = "0.1.0"
 dependencies = [
  "bitflags",
  "bstr",
+ "bytecode",
  "byteorder",
- "codespan-reporting",
  "encoding_rs",
- "logos",
  "num-derive",
  "num-traits",
- "thiserror",
 ]
 
 [[package]]
@@ -146,6 +153,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da0df0e5185db44f69b44f26786fe401b6c293d1907744beaa7fa62b2e5a517a"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "parser"
+version = "0.1.0"
+dependencies = [
+ "codespan-reporting",
+ "encoding_rs",
+ "logos",
+ "thiserror",
 ]
 
 [[package]]

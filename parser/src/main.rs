@@ -69,9 +69,12 @@ impl ParseError {
 
 fn main() {
     // let bytes = include_bytes!("../DIA_vlk_439_vatras.d");
-    let bytes = include_bytes!("../DIA_bau_950_lobart.d");
+    let bytes = include_bytes!("../../DIA_bau_950_lobart.d");
+    // let bytes = include_bytes!("../../lobart.d");
+
     // let bytes = include_bytes!("../a1.d");
-    let (src, _, _) = encoding_rs::WINDOWS_1250.decode(bytes);
+    let (src, enc, _) = encoding_rs::WINDOWS_1250.decode(bytes);
+    dbg!(enc);
 
     let mut lexer = lex::DaedalusLexer::new(&src);
 

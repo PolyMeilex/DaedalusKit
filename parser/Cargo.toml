@@ -1,0 +1,10 @@
+[package]
+name = "parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codespan-reporting.workspace = true
+encoding_rs.workspace = true
+logos.workspace = true
+thiserror.workspace = true
