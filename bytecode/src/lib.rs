@@ -1,7 +1,7 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive as _;
-use std::io::{self, Read, Write};
+use std::io::{self, Cursor, Read, Write};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Bytecode {
@@ -41,6 +41,17 @@ impl Bytecode {
         w.write_all(&self.bytecode).unwrap();
 
         Ok(std::mem::size_of::<u32>() + std::mem::size_of::<u8>() * self.bytecode.len())
+    }
+
+    pub fn instructions(&self) -> impl Iterator<Item = Instruction> + '_ {
+        let mut r = Cursor::new(&self.bytecode);
+        std::iter::from_fn(move || {
+            if r.position() as usize >= self.bytecode.len() {
+                None
+            } else {
+                Some(Instruction::decode(&mut r).unwrap())
+            }
+        })
     }
 }
 

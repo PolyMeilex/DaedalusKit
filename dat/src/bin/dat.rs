@@ -443,19 +443,8 @@ fn run(data: Vec<u8>) {
         }
     }
 
-    let bytecode_len = dat.bytecode.as_bytes().len();
-
-    let mut addr = 0;
-    let mut bytecode = Cursor::new(dat.bytecode.as_bytes());
-
-    loop {
-        let i = Instruction::decode(&mut bytecode).unwrap();
+    for i in dat.bytecode.instructions() {
         println!("{i:?}");
-        addr += i.size();
-
-        if addr >= bytecode_len {
-            break;
-        }
     }
 
     println!();
