@@ -3,7 +3,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive as _;
 use std::io::{self, Read, Write};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Bytecode {
     bytecode: Vec<u8>,
 }
@@ -15,12 +15,24 @@ impl Bytecode {
         }
     }
 
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.bytecode
+    }
+
     pub fn block<'a>(&mut self, i: impl IntoIterator<Item = &'a Instruction>) -> u32 {
         let addr = self.bytecode.len();
         for i in i {
             i.encode(&mut self.bytecode).unwrap();
         }
         addr as u32
+    }
+
+    pub fn decode(mut r: impl Read) -> io::Result<Self> {
+        let len = r.read_u32::<LittleEndian>()? as usize;
+        let mut bytecode = vec![0; len];
+        r.read_exact(&mut bytecode)?;
+
+        Ok(Self { bytecode })
     }
 
     pub fn encode(&self, mut w: impl Write) -> io::Result<usize> {

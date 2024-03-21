@@ -527,33 +527,18 @@ fn run(data: Vec<u8>) {
         // TODO: Handle this incorrect escape: https://github.com/GothicKit/ZenKit/commit/0e7e507de92e8da4ec28513e6be56e4043329990
     }
 
-    let bytecode_size = data.read_u32::<LittleEndian>().unwrap() as usize;
-    let mut bytecode = vec![0; bytecode_size];
-    data.read_exact(&mut bytecode).unwrap();
-
-    println!();
-
-    for (id, _byte) in bytecode.iter().enumerate() {
-        print!("{id:3x?}");
-    }
-
-    println!();
-
-    for byte in bytecode.iter() {
-        print!("{byte:3x?}");
-    }
-
-    println!();
+    let bytecode = Bytecode::decode(&mut data).unwrap();
+    let bytecode_len = bytecode.as_bytes().len();
 
     let mut addr = 0;
-    let mut bytecode = Cursor::new(bytecode);
+    let mut bytecode = Cursor::new(bytecode.as_bytes());
 
     loop {
         let i = Instruction::decode(&mut bytecode).unwrap();
         println!("{i:?}");
         addr += i.size();
 
-        if addr >= bytecode_size {
+        if addr >= bytecode_len {
             break;
         }
     }
