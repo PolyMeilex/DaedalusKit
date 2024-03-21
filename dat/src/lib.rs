@@ -1,4 +1,3 @@
-use bstr::{BStr, BString, ByteSlice};
 use bytecode::Bytecode;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -6,33 +5,17 @@ use num_traits::FromPrimitive as _;
 use properties::Properties;
 use std::io::{Read, Write};
 
+mod zstring;
+pub use zstring::ZString;
+
+use crate::properties::DataType;
+
 #[derive(Debug, PartialEq)]
 pub struct Symbol {
-    name: Option<BString>,
-    props: Properties,
-    data: SymbolData,
-    parent: Option<u32>,
-}
-
-fn encode_str(str: &BStr, mut w: impl Write) -> std::io::Result<usize> {
-    let len = str.len();
-    w.write_all(str.as_bytes())?;
-    w.write_u8(b'\n')?;
-    Ok(len + 1)
-}
-
-fn decode_str(mut r: impl Read) -> std::io::Result<BString> {
-    let mut str = Vec::new();
-    let mut b = r.read_u8()?;
-    while b != b'\n' {
-        // if b == 0xFF {
-        //     Set some "builin" flag
-        // }
-        str.push(b);
-        b = r.read_u8()?;
-    }
-
-    Ok(BString::new(str))
+    pub name: Option<ZString>,
+    pub props: Properties,
+    pub data: SymbolData,
+    pub parent: Option<u32>,
 }
 
 impl Symbol {
@@ -42,7 +25,7 @@ impl Symbol {
         assert!(named == 0 || named == 1, "has_name: 0x{named:x?}");
 
         let name = if named == 1 {
-            Some(decode_str(&mut r)?)
+            Some(ZString::decode(&mut r)?)
         } else {
             None
         };
@@ -52,11 +35,9 @@ impl Symbol {
         let flags = props.elem_props.flags();
 
         let data = if !flags.contains(properties::PropFlag::CLASS_VAR) {
-            use properties::*;
+            let count = props.elem_props.count() as usize;
             match props.elem_props.data_type() {
                 DataType::Float => {
-                    let count = props.elem_props.count() as usize;
-
                     let mut floats = Vec::with_capacity(count);
                     for _ in 0..count {
                         let v = r.read_f32::<LittleEndian>()?;
@@ -66,8 +47,6 @@ impl Symbol {
                     SymbolData::Float(floats)
                 }
                 DataType::Int => {
-                    let count = props.elem_props.count() as usize;
-
                     let mut ints = Vec::with_capacity(count);
                     for _ in 0..count {
                         let v = r.read_i32::<LittleEndian>()?;
@@ -77,11 +56,9 @@ impl Symbol {
                     SymbolData::Int(ints)
                 }
                 DataType::String => {
-                    let count = props.elem_props.count() as usize;
-
                     let mut strings = Vec::with_capacity(count);
                     for _ in 0..count {
-                        strings.push(decode_str(&mut r)?);
+                        strings.push(ZString::decode(&mut r)?);
                     }
 
                     SymbolData::String(strings)
@@ -128,7 +105,7 @@ impl Symbol {
     pub fn encode(&self, mut w: impl Write) -> std::io::Result<()> {
         if let Some(name) = self.name.as_ref() {
             w.write_u32::<LittleEndian>(1)?;
-            encode_str(name.as_bstr(), &mut w)?;
+            name.encode(&mut w)?;
         } else {
             w.write_u32::<LittleEndian>(0)?;
         }
@@ -148,7 +125,7 @@ impl Symbol {
             }
             SymbolData::String(v) => {
                 for v in v {
-                    encode_str(v.as_bstr(), &mut w)?;
+                    v.encode(&mut w)?;
                 }
             }
             SymbolData::ClassOffset(v) => {
@@ -174,10 +151,10 @@ impl Symbol {
 }
 
 #[derive(Debug, PartialEq)]
-enum SymbolData {
+pub enum SymbolData {
     Float(Vec<f32>),
     Int(Vec<i32>),
-    String(Vec<BString>),
+    String(Vec<ZString>),
     ClassOffset(u32),
     Address(u32),
     None,
@@ -185,10 +162,10 @@ enum SymbolData {
 
 #[derive(Debug, PartialEq)]
 pub struct DatFile {
-    version: u8,
-    sort_indexes: Vec<u32>,
-    symbols: Vec<Symbol>,
-    bytecode: Bytecode,
+    pub version: u8,
+    pub sort_indexes: Vec<u32>,
+    pub symbols: Vec<Symbol>,
+    pub bytecode: Bytecode,
 }
 
 impl DatFile {
@@ -236,7 +213,7 @@ impl DatFile {
     }
 }
 
-mod properties {
+pub mod properties {
     #![allow(dead_code)]
 
     use super::*;
