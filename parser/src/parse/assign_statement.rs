@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    lex::{DaedalusLexer, Token},
     ParseError,
 };
+use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
 #[derive(Debug)]

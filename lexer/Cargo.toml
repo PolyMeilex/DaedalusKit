@@ -1,11 +1,8 @@
 [package]
-name = "parser"
+name = "lexer"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-lexer.workspace = true
-codespan-reporting.workspace = true
-encoding_rs.workspace = true
 logos.workspace = true
 thiserror.workspace = true

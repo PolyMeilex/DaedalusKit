@@ -1,6 +1,57 @@
 use logos::{Lexer, Logos};
 
-use crate::ParseError;
+#[derive(Debug, thiserror::Error)]
+pub enum TokenErrorKind {
+    #[error("Unkonown token")]
+    UnkonownToken,
+    #[error("Unexpected {got}")]
+    UnexpecedToken { got: Token },
+    #[error("Expected {expected} got {got}")]
+    ExpectedToken { expected: Token, got: Token },
+    #[error("Unexpected end of file")]
+    EOF,
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("{kind} {span:?}")]
+pub struct TokenError {
+    pub kind: TokenErrorKind,
+    pub span: logos::Span,
+}
+
+impl TokenError {
+    pub fn eof(span: logos::Span) -> Self {
+        Self {
+            kind: TokenErrorKind::EOF,
+            span,
+        }
+    }
+
+    pub fn unkonown_token(span: logos::Span) -> Self {
+        Self {
+            kind: TokenErrorKind::UnkonownToken,
+            span,
+        }
+    }
+
+    pub fn unexpeced_token(got: Token, span: logos::Span) -> Self {
+        Self {
+            kind: TokenErrorKind::UnexpecedToken { got },
+            span,
+        }
+    }
+
+    pub fn expected_token(got: Token, expected: Token, span: logos::Span) -> Self {
+        Self {
+            kind: TokenErrorKind::ExpectedToken { got, expected },
+            span,
+        }
+    }
+
+    pub fn span(&self) -> &logos::Span {
+        &self.span
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Logos)]
 pub enum Token {
@@ -186,58 +237,58 @@ impl<'a> DaedalusLexer<'a> {
         });
     }
 
-    pub fn peek_raw(&mut self) -> Result<Token, ParseError> {
+    pub fn peek_raw(&mut self) -> Result<Token, TokenError> {
         let peek = self.lexer.clone().next();
 
         let Some(peek) = peek else {
-            return Err(ParseError::eof(self.span()));
+            return Err(TokenError::eof(self.span()));
         };
 
         let Ok(peek) = peek else {
-            return Err(ParseError::unkonown_token(self.span()));
+            return Err(TokenError::unkonown_token(self.span()));
         };
 
         Ok(peek)
     }
 
-    pub fn eat_one_raw(&mut self) -> Result<Token, ParseError> {
+    pub fn eat_one_raw(&mut self) -> Result<Token, TokenError> {
         let Some(token) = self.lexer.next() else {
-            return Err(ParseError::eof(self.span()));
+            return Err(TokenError::eof(self.span()));
         };
 
         let Ok(token) = token else {
-            return Err(ParseError::unkonown_token(self.span()));
+            return Err(TokenError::unkonown_token(self.span()));
         };
 
         Ok(token)
     }
 
-    pub fn peek_with_comments(&mut self) -> Result<Token, ParseError> {
+    pub fn peek_with_comments(&mut self) -> Result<Token, TokenError> {
         self.eat_while(|token| matches!(token, Token::Whitespace | Token::Newline));
         self.peek_raw()
     }
 
-    pub fn peek(&mut self) -> Result<Token, ParseError> {
+    pub fn peek(&mut self) -> Result<Token, TokenError> {
         self.eat_whitespace();
         self.peek_raw()
     }
 
-    pub fn eat_one(&mut self) -> Result<Token, ParseError> {
+    pub fn eat_one(&mut self) -> Result<Token, TokenError> {
         self.eat_whitespace();
         self.eat_one_raw()
     }
 
-    pub fn eat_ident(&mut self) -> Result<&'a str, ParseError> {
+    pub fn eat_ident(&mut self) -> Result<&'a str, TokenError> {
         self.eat_token(Token::Ident)?;
         Ok(self.lexer.slice())
     }
 
-    pub fn eat_token(&mut self, expected: Token) -> Result<(), ParseError> {
+    pub fn eat_token(&mut self, expected: Token) -> Result<(), TokenError> {
         let got = self.eat_one()?;
         if got == expected {
             Ok(())
         } else {
-            Err(ParseError::expected_token(got, expected, self.lexer.span()))
+            Err(TokenError::expected_token(got, expected, self.lexer.span()))
         }
     }
 }

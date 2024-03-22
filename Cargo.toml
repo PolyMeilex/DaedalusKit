@@ -1,9 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["bytecode", "dat", "parser"]
+members = ["bytecode", "dat", "lexer", "parser"]
 
 [workspace.dependencies]
 bytecode = { path = "./bytecode" }
+lexer = { path = "./lexer" }
 
 bitflags = "2.4.2"
 bstr = "1.9.1"

@@ -1,71 +1,14 @@
 #![allow(clippy::single_match)]
 
-mod lex;
 use std::process::exit;
 
 use fmt::DaedalusFormatter;
-use lex::Token;
+use lexer::{DaedalusLexer, Token, TokenErrorKind};
 
 mod fmt;
 pub mod parse;
 
-#[derive(Debug, thiserror::Error)]
-pub enum ParseErrorKind {
-    #[error("Unkonown token")]
-    UnkonownToken,
-    #[error("Unexpected {got}")]
-    UnexpecedToken { got: Token },
-    #[error("Expected {expected} got {got}")]
-    ExpectedToken { expected: Token, got: Token },
-    #[error("Unexpected end of file")]
-    EOF,
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error("{kind} in {ctx}")]
-pub struct ParseError {
-    pub kind: ParseErrorKind,
-    pub span: logos::Span,
-    pub ctx: &'static str,
-}
-
-impl ParseError {
-    fn eof(span: logos::Span) -> Self {
-        Self {
-            kind: ParseErrorKind::EOF,
-            span,
-            ctx: "",
-        }
-    }
-
-    fn unkonown_token(span: logos::Span) -> Self {
-        Self {
-            kind: ParseErrorKind::UnkonownToken,
-            span,
-            ctx: "",
-        }
-    }
-
-    fn unexpeced_token(got: Token, span: logos::Span) -> Self {
-        Self {
-            kind: ParseErrorKind::UnexpecedToken { got },
-            span,
-            ctx: "",
-        }
-    }
-
-    fn expected_token(got: Token, expected: Token, span: logos::Span) -> Self {
-        Self {
-            kind: ParseErrorKind::ExpectedToken { got, expected },
-            span,
-            ctx: "",
-        }
-    }
-
-    fn span(&self) -> &logos::Span {
-        &self.span
-    }
-}
+pub type ParseError = lexer::TokenError;
 
 fn main() {
     // let bytes = include_bytes!("../DIA_vlk_439_vatras.d");
@@ -76,7 +19,7 @@ fn main() {
     let (src, enc, _) = encoding_rs::WINDOWS_1250.decode(bytes);
     dbg!(enc);
 
-    let mut lexer = lex::DaedalusLexer::new(&src);
+    let mut lexer = DaedalusLexer::new(&src);
 
     let emit_error = |err: &ParseError| emit_error(&src, err);
     let mut formatter = DaedalusFormatter::default();
@@ -127,7 +70,7 @@ fn emit_error(src: &str, err: &ParseError) {
         vec![Label::primary(file_id, err.span().clone()).with_message(err.to_string())];
 
     match &err.kind {
-        ParseErrorKind::ExpectedToken {
+        TokenErrorKind::ExpectedToken {
             expected: Token::Semi,
             ..
         } => {
