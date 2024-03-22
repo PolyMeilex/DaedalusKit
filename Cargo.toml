@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["bytecode", "dat", "lexer", "output-units", "parser", "zenkit"]
+members = ["bytecode", "dat", "lexer", "output-units", "parser", "src-file", "zenkit"]
 
 [workspace.dependencies]
 bytecode = { path = "./bytecode" }
