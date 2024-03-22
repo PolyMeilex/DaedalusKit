@@ -2,7 +2,7 @@ use bytecode::Bytecode;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive as _;
-use properties::Properties;
+use properties::{Properties, SymbolCodeSpan};
 use std::io::{Read, Write};
 
 mod zstring;
@@ -14,6 +14,7 @@ use crate::properties::DataType;
 pub struct Symbol {
     pub name: Option<ZString>,
     pub props: Properties,
+    pub code_span: SymbolCodeSpan,
     pub data: SymbolData,
     pub parent: Option<u32>,
 }
@@ -31,6 +32,7 @@ impl Symbol {
         };
 
         let props = properties::Properties::decode(&mut r)?;
+        let code_span = SymbolCodeSpan::decode(&mut r)?;
 
         let flags = props.elem_props.flags();
 
@@ -97,6 +99,7 @@ impl Symbol {
         Ok(Symbol {
             name,
             props,
+            code_span,
             data,
             parent,
         })
@@ -111,6 +114,7 @@ impl Symbol {
         }
 
         self.props.encode(&mut w)?;
+        self.code_span.encode(&mut w)?;
 
         match &self.data {
             SymbolData::Float(v) => {
@@ -241,14 +245,62 @@ pub mod properties {
     }
 
     #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
-    pub struct Properties {
-        pub off_cls_ret: i32,
-        pub elem_props: ElemProps,
+    pub struct SymbolCodeSpan {
         pub file_index: u19,
         pub line_start: u19,
         pub line_count: u19,
-        pub char_start: u24,
-        pub char_count: u24,
+        pub col_start: u24,
+        pub col_count: u24,
+    }
+
+    impl SymbolCodeSpan {
+        pub fn new(
+            id: u32,
+            (line_start, line_count): (u32, u32),
+            (col_start, col_count): (u32, u32),
+        ) -> Self {
+            Self {
+                file_index: u19::new(id),
+                line_start: u19::new(line_start),
+                line_count: u19::new(line_count),
+                col_start: u24::new(col_start),
+                col_count: u24::new(col_count),
+            }
+        }
+
+        pub fn decode(mut r: impl Read) -> std::io::Result<Self> {
+            let file_index = u19(r.read_u32::<LittleEndian>()?);
+            let line_start = u19(r.read_u32::<LittleEndian>()?);
+            let line_count = u19(r.read_u32::<LittleEndian>()?);
+            let col_start = u24(r.read_u32::<LittleEndian>()?);
+            let col_count = u24(r.read_u32::<LittleEndian>()?);
+
+            Ok(Self {
+                file_index,
+                line_start,
+                line_count,
+                col_start,
+                col_count,
+            })
+        }
+
+        pub fn encode(&self, mut w: impl Write) -> std::io::Result<()> {
+            w.write_u32::<LittleEndian>(self.file_index.0)?;
+
+            w.write_u32::<LittleEndian>(self.line_start.0)?;
+            w.write_u32::<LittleEndian>(self.line_count.0)?;
+
+            w.write_u32::<LittleEndian>(self.col_start.0)?;
+            w.write_u32::<LittleEndian>(self.col_count.0)?;
+
+            Ok(())
+        }
+    }
+
+    #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
+    pub struct Properties {
+        pub off_cls_ret: i32,
+        pub elem_props: ElemProps,
     }
 
     impl Properties {
@@ -260,29 +312,12 @@ pub mod properties {
 
             this.elem_props.0 = r.read_u32::<LittleEndian>()?;
 
-            this.file_index.0 = r.read_u32::<LittleEndian>()?;
-
-            this.line_start.0 = r.read_u32::<LittleEndian>()?;
-            this.line_count.0 = r.read_u32::<LittleEndian>()?;
-
-            this.char_start.0 = r.read_u32::<LittleEndian>()?;
-            this.char_count.0 = r.read_u32::<LittleEndian>()?;
-
             Ok(this)
         }
 
         pub fn encode(&self, mut w: impl Write) -> std::io::Result<()> {
             w.write_i32::<LittleEndian>(self.off_cls_ret)?;
             w.write_u32::<LittleEndian>(self.elem_props.0)?;
-
-            w.write_u32::<LittleEndian>(self.file_index.0)?;
-
-            w.write_u32::<LittleEndian>(self.line_start.0)?;
-            w.write_u32::<LittleEndian>(self.line_count.0)?;
-
-            w.write_u32::<LittleEndian>(self.char_start.0)?;
-            w.write_u32::<LittleEndian>(self.char_count.0)?;
-
             Ok(())
         }
     }

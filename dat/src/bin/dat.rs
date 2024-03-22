@@ -1,7 +1,7 @@
 use bytecode::{Bytecode, Instruction};
 use byteorder::{LittleEndian, WriteBytesExt};
 use dat::{
-    properties::{u19, u24, DataType, ElemProps, PropFlag, Properties},
+    properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
     Symbol, SymbolData, ZString,
 };
 use std::io::Cursor;
@@ -35,12 +35,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(0),
-                line_start: u19::new(235),
-                line_count: u19::new(1),
-                char_start: u24::new(0),
-                char_count: u24::new(66),
             },
+            code_span: SymbolCodeSpan::new(0, (235, 1), (0, 66)),
             data: SymbolData::Address(-1i32),
             parent: None,
         });
@@ -56,12 +52,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(0),
-                line_start: u19::new(235),
-                line_count: u19::new(1),
-                char_start: u24::new(31),
-                char_count: u24::new(17),
             },
+            code_span: SymbolCodeSpan::new(0, (235, 1), (31, 17)),
             data: SymbolData::Address(0),
             parent: None,
         });
@@ -77,12 +69,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(0),
-                line_start: u19::new(235),
-                line_count: u19::new(1),
-                char_start: u24::new(50),
-                char_count: u24::new(15),
             },
+            code_span: SymbolCodeSpan::new(0, (235, 1), (50, 15)),
             data: SymbolData::None,
             parent: None,
         });
@@ -101,12 +89,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(1),
-                line_start: u19::new(1),
-                line_count: u19::new(37),
-                char_start: u24::new(1),
-                char_count: u24::new(826),
             },
+            code_span: SymbolCodeSpan::new(1, (1, 37), (1, 826)),
             data: SymbolData::Address(288),
             parent: None,
         });
@@ -122,12 +106,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(1),
-                line_start: u19::new(9),
-                line_count: u19::new(1),
-                char_start: u24::new(12),
-                char_count: u24::new(8),
             },
+            code_span: SymbolCodeSpan::new(1, (9, 1), (12, 8)),
             data: SymbolData::None,
             parent: Some(4),
         });
@@ -143,12 +123,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(1),
-                line_start: u19::new(10),
-                line_count: u19::new(1),
-                char_start: u24::new(12),
-                char_count: u24::new(9),
             },
+            code_span: SymbolCodeSpan::new(1, (10, 1), (12, 9)),
             data: SymbolData::None,
             parent: Some(4),
         });
@@ -164,12 +140,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(1),
-                line_start: u19::new(11),
-                line_count: u19::new(1),
-                char_start: u24::new(12),
-                char_count: u24::new(8),
             },
+            code_span: SymbolCodeSpan::new(1, (11, 1), (12, 8)),
             data: SymbolData::None,
             parent: Some(4),
         });
@@ -189,12 +161,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(1),
-                line_start: u19::new(61),
-                line_count: u19::new(5),
-                char_start: u24::new(0),
-                char_count: u24::new(111),
             },
+            code_span: SymbolCodeSpan::new(1, (61, 5), (0, 111)),
             data: SymbolData::Address(0),
             parent: Some(4),
         })
@@ -213,12 +181,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(1),
-                line_start: u19::new(67),
-                line_count: u19::new(1),
-                char_start: u24::new(0),
-                char_count: u24::new(29),
             },
+            code_span: SymbolCodeSpan::new(1, (67, 1), (0, 29)),
             data: SymbolData::Address(0),
             parent: None,
         })
@@ -237,12 +201,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(1),
-                line_start: u19::new(68),
-                line_count: u19::new(1),
-                char_start: u24::new(0),
-                char_count: u24::new(26),
             },
+            code_span: SymbolCodeSpan::new(1, (68, 1), (0, 26)),
             data: SymbolData::Address(0),
             parent: None,
         })
@@ -261,12 +221,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u19::new(1),
-                line_start: u19::new(64),
-                line_count: u19::new(1),
-                char_start: u24::new(23),
-                char_count: u24::new(12),
             },
+            code_span: SymbolCodeSpan::new(1, (64, 1), (23, 12)),
             data: SymbolData::String(vec![ZString::from("HUMANS.MDS")]),
             parent: None,
         })
@@ -287,8 +243,8 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                ..Default::default()
             },
+            code_span: SymbolCodeSpan::new(0, (0, 0), (0, 0)),
             data: SymbolData::Address(0),
             parent: None,
         });
