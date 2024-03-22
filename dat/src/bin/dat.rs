@@ -1,19 +1,14 @@
 use bytecode::{Bytecode, Instruction};
 use byteorder::{LittleEndian, WriteBytesExt};
-use dat::properties::{u18, u23, DataType, ElemProps, PropFlag, Properties};
-use std::io::{Cursor, Write};
-
-#[derive(Debug)]
-struct DatSymbol {
-    name: Vec<u8>,
-    props: Properties,
-    data: Vec<u8>,
-    parent: i32,
-}
+use dat::{
+    properties::{u19, u24, DataType, ElemProps, PropFlag, Properties},
+    Symbol, SymbolData, ZString,
+};
+use std::io::Cursor;
 
 #[derive(Debug)]
 struct DatBuilder {
-    symbols: Vec<DatSymbol>,
+    symbols: Vec<Symbol>,
     sort_idx: Vec<u32>,
     bytecode: Bytecode,
 }
@@ -28,8 +23,8 @@ impl DatBuilder {
     }
 
     fn gen_mdl_set_visual(&mut self) {
-        self.push_symbol(DatSymbol {
-            name: b"MDL_SETVISUAL\n".to_vec(),
+        self.push_symbol(Symbol {
+            name: Some(ZString::from("MDL_SETVISUAL")),
             props: Properties {
                 off_cls_ret: 0,
                 elem_props: {
@@ -40,17 +35,17 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(0),
-                line_start: u18::new(235),
-                line_count: u18::new(1),
-                char_start: u23::new(0),
-                char_count: u23::new(66),
+                file_index: u19::new(0),
+                line_start: u19::new(235),
+                line_count: u19::new(1),
+                char_start: u24::new(0),
+                char_count: u24::new(66),
             },
-            data: (-1i32).to_le_bytes().to_vec(),
-            parent: -1,
+            data: SymbolData::Address(-1i32),
+            parent: None,
         });
-        self.push_symbol(DatSymbol {
-            name: b"MDL_SETVISUAL.PAR0\n".to_vec(),
+        self.push_symbol(Symbol {
+            name: Some(ZString::from("MDL_SETVISUAL.PAR0")),
             props: Properties {
                 off_cls_ret: 0,
                 elem_props: {
@@ -61,17 +56,17 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(0),
-                line_start: u18::new(235),
-                line_count: u18::new(1),
-                char_start: u23::new(31),
-                char_count: u23::new(17),
+                file_index: u19::new(0),
+                line_start: u19::new(235),
+                line_count: u19::new(1),
+                char_start: u24::new(31),
+                char_count: u24::new(17),
             },
-            data: 0i32.to_le_bytes().to_vec(),
-            parent: -1,
+            data: SymbolData::Address(0),
+            parent: None,
         });
-        self.push_symbol(DatSymbol {
-            name: b"MDL_SETVISUAL.PAR1\n".to_vec(),
+        self.push_symbol(Symbol {
+            name: Some(ZString::from("MDL_SETVISUAL.PAR1")),
             props: Properties {
                 off_cls_ret: 0,
                 elem_props: {
@@ -82,20 +77,20 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(0),
-                line_start: u18::new(235),
-                line_count: u18::new(1),
-                char_start: u23::new(50),
-                char_count: u23::new(15),
+                file_index: u19::new(0),
+                line_start: u19::new(235),
+                line_count: u19::new(1),
+                char_start: u24::new(50),
+                char_count: u24::new(15),
             },
-            data: vec![],
-            parent: -1,
+            data: SymbolData::None,
+            parent: None,
         });
     }
 
     fn gen_c_npc(&mut self) -> (u32, u32) {
-        let c_npc = self.push_symbol(DatSymbol {
-            name: b"C_NPC\n".to_vec(),
+        let c_npc = self.push_symbol(Symbol {
+            name: Some(ZString::from("C_NPC")),
             props: Properties {
                 off_cls_ret: 800,
                 elem_props: {
@@ -106,17 +101,17 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(1),
-                line_start: u18::new(1),
-                line_count: u18::new(37),
-                char_start: u23::new(1),
-                char_count: u23::new(826),
+                file_index: u19::new(1),
+                line_start: u19::new(1),
+                line_count: u19::new(37),
+                char_start: u24::new(1),
+                char_count: u24::new(826),
             },
-            data: (288i32).to_le_bytes().to_vec(),
-            parent: -1,
+            data: SymbolData::Address(288),
+            parent: None,
         });
-        self.push_symbol(DatSymbol {
-            name: b"C_NPC.PADDING1\n".to_vec(),
+        self.push_symbol(Symbol {
+            name: Some(ZString::from("C_NPC.PADDING1")),
             props: Properties {
                 off_cls_ret: 288,
                 elem_props: {
@@ -127,17 +122,17 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(1),
-                line_start: u18::new(9),
-                line_count: u18::new(1),
-                char_start: u23::new(12),
-                char_count: u23::new(8),
+                file_index: u19::new(1),
+                line_start: u19::new(9),
+                line_count: u19::new(1),
+                char_start: u24::new(12),
+                char_count: u24::new(8),
             },
-            data: vec![],
-            parent: 4,
+            data: SymbolData::None,
+            parent: Some(4),
         });
-        let c_npc_attribute = self.push_symbol(DatSymbol {
-            name: b"C_NPC.ATTRIBUTE\n".to_vec(),
+        let c_npc_attribute = self.push_symbol(Symbol {
+            name: Some(ZString::from("C_NPC.ATTRIBUTE")),
             props: Properties {
                 off_cls_ret: 440,
                 elem_props: {
@@ -148,17 +143,17 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(1),
-                line_start: u18::new(10),
-                line_count: u18::new(1),
-                char_start: u23::new(12),
-                char_count: u23::new(9),
+                file_index: u19::new(1),
+                line_start: u19::new(10),
+                line_count: u19::new(1),
+                char_start: u24::new(12),
+                char_count: u24::new(9),
             },
-            data: vec![],
-            parent: 4,
+            data: SymbolData::None,
+            parent: Some(4),
         });
-        self.push_symbol(DatSymbol {
-            name: b"C_NPC.PADDING2\n".to_vec(),
+        self.push_symbol(Symbol {
+            name: Some(ZString::from("C_NPC.PADDING2")),
             props: Properties {
                 off_cls_ret: 472,
                 elem_props: {
@@ -169,21 +164,21 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(1),
-                line_start: u18::new(11),
-                line_count: u18::new(1),
-                char_start: u23::new(12),
-                char_count: u23::new(8),
+                file_index: u19::new(1),
+                line_start: u19::new(11),
+                line_count: u19::new(1),
+                char_start: u24::new(12),
+                char_count: u24::new(8),
             },
-            data: vec![],
-            parent: 4,
+            data: SymbolData::None,
+            parent: Some(4),
         });
         (c_npc, c_npc_attribute)
     }
 
     fn gen_pc_hero(&mut self) -> u32 {
-        self.push_symbol(DatSymbol {
-            name: b"PC_HERO\n".to_vec(),
+        self.push_symbol(Symbol {
+            name: Some(ZString::from("PC_HERO")),
             props: Properties {
                 off_cls_ret: 0,
                 elem_props: {
@@ -194,20 +189,20 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(1),
-                line_start: u18::new(61),
-                line_count: u18::new(5),
-                char_start: u23::new(0),
-                char_count: u23::new(111),
+                file_index: u19::new(1),
+                line_start: u19::new(61),
+                line_count: u19::new(5),
+                char_start: u24::new(0),
+                char_count: u24::new(111),
             },
-            data: 0u32.to_le_bytes().to_vec(),
-            parent: 4,
+            data: SymbolData::Address(0),
+            parent: Some(4),
         })
     }
 
     pub fn gen_startup_global(&mut self) -> u32 {
-        self.push_symbol(DatSymbol {
-            name: b"STARTUP_GLOBAL\n".to_vec(),
+        self.push_symbol(Symbol {
+            name: Some(ZString::from("STARTUP_GLOBAL")),
             props: Properties {
                 off_cls_ret: 0,
                 elem_props: {
@@ -218,20 +213,20 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(1),
-                line_start: u18::new(67),
-                line_count: u18::new(1),
-                char_start: u23::new(0),
-                char_count: u23::new(29),
+                file_index: u19::new(1),
+                line_start: u19::new(67),
+                line_count: u19::new(1),
+                char_start: u24::new(0),
+                char_count: u24::new(29),
             },
-            data: 0u32.to_le_bytes().to_vec(),
-            parent: -1,
+            data: SymbolData::Address(0),
+            parent: None,
         })
     }
 
     pub fn gen_init_global(&mut self) -> u32 {
-        self.push_symbol(DatSymbol {
-            name: b"INIT_GLOBAL\n".to_vec(),
+        self.push_symbol(Symbol {
+            name: Some(ZString::from("INIT_GLOBAL")),
             props: Properties {
                 off_cls_ret: 0,
                 elem_props: {
@@ -242,20 +237,20 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(1),
-                line_start: u18::new(68),
-                line_count: u18::new(1),
-                char_start: u23::new(0),
-                char_count: u23::new(26),
+                file_index: u19::new(1),
+                line_start: u19::new(68),
+                line_count: u19::new(1),
+                char_start: u24::new(0),
+                char_count: u24::new(26),
             },
-            data: 0u32.to_le_bytes().to_vec(),
-            parent: -1,
+            data: SymbolData::Address(0),
+            parent: None,
         })
     }
 
     pub fn gen_f10000(&mut self) -> u32 {
-        self.push_symbol(DatSymbol {
-            name: b"\xFF10000\n".to_vec(),
+        self.push_symbol(Symbol {
+            name: Some(ZString::from(b"\xFF10000")),
             props: Properties {
                 off_cls_ret: 0,
                 elem_props: {
@@ -266,22 +261,22 @@ impl DatBuilder {
                     default.set_space(1);
                     default
                 },
-                file_index: u18::new(1),
-                line_start: u18::new(64),
-                line_count: u18::new(1),
-                char_start: u23::new(23),
-                char_count: u23::new(12),
+                file_index: u19::new(1),
+                line_start: u19::new(64),
+                line_count: u19::new(1),
+                char_start: u24::new(23),
+                char_count: u24::new(12),
             },
-            data: b"HUMANS.MDS\n".to_vec(),
-            parent: -1,
+            data: SymbolData::String(vec![ZString::from("HUMANS.MDS")]),
+            parent: None,
         })
     }
 
     pub fn example() -> Self {
         let mut dat = Self::new();
 
-        dat.push_symbol(DatSymbol {
-            name: b"\xFFINSTANCE_HELP\n".to_vec(),
+        dat.push_symbol(Symbol {
+            name: Some(ZString::from(b"\xFFINSTANCE_HELP")),
             props: Properties {
                 off_cls_ret: 0,
                 elem_props: {
@@ -294,8 +289,8 @@ impl DatBuilder {
                 },
                 ..Default::default()
             },
-            data: 0i32.to_le_bytes().to_vec(),
-            parent: -1,
+            data: SymbolData::Address(0),
+            parent: None,
         });
 
         dat.gen_mdl_set_visual();
@@ -323,13 +318,14 @@ impl DatBuilder {
             Instruction::be(1),
             Instruction::rsr(),
         ]);
-        dat.symbols[pc_hero_id as usize].data = pc_hero_addr.to_le_bytes().to_vec();
+        dat.symbols[pc_hero_id as usize].data = SymbolData::Address(pc_hero_addr as i32);
 
         let startup_global_addr = dat.bytecode.block(&[Instruction::rsr()]);
-        dat.symbols[startup_global_id as usize].data = startup_global_addr.to_le_bytes().to_vec();
+        dat.symbols[startup_global_id as usize].data =
+            SymbolData::Address(startup_global_addr as i32);
 
         let init_global_addr = dat.bytecode.block(&[Instruction::rsr()]);
-        dat.symbols[init_global_id as usize].data = init_global_addr.to_le_bytes().to_vec();
+        dat.symbols[init_global_id as usize].data = SymbolData::Address(init_global_addr as i32);
 
         let mut symbol_ids: Vec<_> = dat
             .symbols
@@ -345,7 +341,7 @@ impl DatBuilder {
         dat
     }
 
-    pub fn push_symbol(&mut self, symbol: DatSymbol) -> u32 {
+    pub fn push_symbol(&mut self, symbol: Symbol) -> u32 {
         let id = self.symbols.len();
         self.symbols.push(symbol);
         id as u32
@@ -363,13 +359,7 @@ impl DatBuilder {
         }
 
         for symbol in self.symbols.iter() {
-            out.write_u32::<LittleEndian>(1).unwrap();
-            out.write_all(&symbol.name).unwrap();
-
-            symbol.props.encode(&mut out).unwrap();
-
-            out.write_all(&symbol.data).unwrap();
-            out.write_i32::<LittleEndian>(symbol.parent).unwrap();
+            symbol.encode(&mut out).unwrap();
         }
 
         self.bytecode.encode(&mut out).unwrap();
@@ -379,16 +369,17 @@ impl DatBuilder {
 }
 
 fn main() {
-    let data = std::fs::read("/home/poly/Gothic2/_work/Data/Scripts/_compiled/GOTHIC.DAT").unwrap();
-    println!("{:?}", &data.len());
-    run(data);
+    // let data = std::fs::read("OUT.DAT").unwrap();
+    // let data = std::fs::read("/home/poly/Gothic2/_work/Data/Scripts/_compiled/GOTHIC.DAT").unwrap();
+    // println!("{:?}", &data.len());
+    // run(data);
 
     // println!();
 
-    // let data = DatBuilder::example().build();
-    // std::fs::write("./OUT.DAT", &data).unwrap();
-    // println!("{:?}", &data.len());
-    // run(data);
+    let data = DatBuilder::example().build();
+    std::fs::write("./OUT.DAT", &data).unwrap();
+    println!("{:?}", &data.len());
+    run(data);
 }
 
 fn run(data: Vec<u8>) {

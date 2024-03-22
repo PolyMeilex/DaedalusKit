@@ -68,15 +68,15 @@ impl Symbol {
                     SymbolData::ClassOffset(class_offset)
                 }
                 DataType::Func => {
-                    let address = r.read_u32::<LittleEndian>()?;
+                    let address = r.read_i32::<LittleEndian>()?;
                     SymbolData::Address(address)
                 }
                 DataType::Prototype => {
-                    let address = r.read_u32::<LittleEndian>()?;
+                    let address = r.read_i32::<LittleEndian>()?;
                     SymbolData::Address(address)
                 }
                 DataType::Instance => {
-                    let address = r.read_u32::<LittleEndian>()?;
+                    let address = r.read_i32::<LittleEndian>()?;
                     SymbolData::Address(address)
                 }
                 DataType::Void => SymbolData::None,
@@ -132,7 +132,7 @@ impl Symbol {
                 w.write_u32::<LittleEndian>(*v)?;
             }
             SymbolData::Address(v) => {
-                w.write_u32::<LittleEndian>(*v)?;
+                w.write_i32::<LittleEndian>(*v)?;
             }
             SymbolData::None => {}
         }
@@ -156,7 +156,7 @@ pub enum SymbolData {
     Int(Vec<i32>),
     String(Vec<ZString>),
     ClassOffset(u32),
-    Address(u32),
+    Address(i32),
     None,
 }
 
@@ -214,8 +214,6 @@ impl DatFile {
 }
 
 pub mod properties {
-    #![allow(dead_code)]
-
     use super::*;
 
     bitflags::bitflags! {
@@ -242,65 +240,15 @@ pub mod properties {
         Instance = 7,
     }
 
-    type BitRange = (usize, usize);
-
-    fn set_field(field: &mut [u8], int: u32, bit_range: BitRange) {
-        fn zero_bit(byte: &mut u8, n_bit: u64) {
-            let bit = 1 << n_bit;
-            *byte &= !bit as u8;
-        }
-
-        fn one_bit(byte: &mut u8, n_bit: u64) {
-            let bit = 1 << n_bit;
-            *byte |= bit as u8;
-        }
-
-        fn get_bit(int: u32, bit: usize) -> bool {
-            ((int >> bit) & 1) == 1
-        }
-
-        let (lhs_bit, rhs_bit) = bit_range;
-
-        for (i, bit_index) in (lhs_bit..=rhs_bit).enumerate() {
-            let byte_index = bit_index / 8;
-            let byte = &mut field[byte_index];
-
-            if get_bit(int, i) {
-                one_bit(byte, (bit_index % 8) as u64);
-            } else {
-                zero_bit(byte, (bit_index % 8) as u64);
-            }
-        }
-    }
-
-    fn get_field(field: &[u8], bit_range: (usize, usize)) -> u32 {
-        let (lhs_bit, rhs_bit) = bit_range;
-        let mut val = 0;
-
-        for (i, bit_index) in (lhs_bit..=rhs_bit).enumerate() {
-            let byte_index = bit_index / 8;
-            let byte = field[byte_index];
-            let bit = 1 << (bit_index % 8);
-            let read_bit = byte & bit;
-
-            if read_bit != 0 {
-                let write_bit = 1 << i;
-                val |= write_bit;
-            }
-        }
-
-        val
-    }
-
     #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
     pub struct Properties {
         pub off_cls_ret: i32,
         pub elem_props: ElemProps,
-        pub file_index: u18,
-        pub line_start: u18,
-        pub line_count: u18,
-        pub char_start: u23,
-        pub char_count: u23,
+        pub file_index: u19,
+        pub line_start: u19,
+        pub line_count: u19,
+        pub char_start: u24,
+        pub char_count: u24,
     }
 
     impl Properties {
@@ -310,88 +258,133 @@ pub mod properties {
                 ..Default::default()
             };
 
-            r.read_exact(&mut this.elem_props.0)?;
+            this.elem_props.0 = r.read_u32::<LittleEndian>()?;
 
-            r.read_exact(&mut this.file_index.0)?;
+            this.file_index.0 = r.read_u32::<LittleEndian>()?;
 
-            r.read_exact(&mut this.line_start.0)?;
-            r.read_exact(&mut this.line_count.0)?;
+            this.line_start.0 = r.read_u32::<LittleEndian>()?;
+            this.line_count.0 = r.read_u32::<LittleEndian>()?;
 
-            r.read_exact(&mut this.char_start.0)?;
-            r.read_exact(&mut this.char_count.0)?;
+            this.char_start.0 = r.read_u32::<LittleEndian>()?;
+            this.char_count.0 = r.read_u32::<LittleEndian>()?;
 
             Ok(this)
         }
 
         pub fn encode(&self, mut w: impl Write) -> std::io::Result<()> {
             w.write_i32::<LittleEndian>(self.off_cls_ret)?;
-            w.write_all(&self.elem_props.0)?;
+            w.write_u32::<LittleEndian>(self.elem_props.0)?;
 
-            w.write_all(&self.file_index.0)?;
+            w.write_u32::<LittleEndian>(self.file_index.0)?;
 
-            w.write_all(&self.line_start.0)?;
-            w.write_all(&self.line_count.0)?;
+            w.write_u32::<LittleEndian>(self.line_start.0)?;
+            w.write_u32::<LittleEndian>(self.line_count.0)?;
 
-            w.write_all(&self.char_start.0)?;
-            w.write_all(&self.char_count.0)?;
+            w.write_u32::<LittleEndian>(self.char_start.0)?;
+            w.write_u32::<LittleEndian>(self.char_count.0)?;
 
             Ok(())
         }
     }
 
     #[derive(Default, Copy, Clone, PartialEq, Eq)]
-    pub struct ElemProps([u8; 4]);
+    pub struct ElemProps(u32);
 
     impl ElemProps {
-        const COUNT: BitRange = (0, 11);
-        const DATA_TYPE: BitRange = (12, 15);
-        const FLAGS: BitRange = (16, 21);
-        const SPACE: BitRange = (22, 22);
-        const RESERVED: BitRange = (23, 31);
+        const A: u32 = 0b00000000000000000000111111111111; // u12 |0
+        const B: u32 = 0b00000000000000001111000000000000; // u4  |12
+        const C: u32 = 0b00000000001111110000000000000000; // u6  |16
+        const D: u32 = 0b00000000010000000000000000000000; // u1  |22
+        const E: u32 = 0b11111111100000000000000000000000; // u9  |23
 
-        fn set_field(&mut self, int: u32, bit_range: BitRange) {
-            set_field(&mut self.0, int, bit_range)
+        pub fn set_count(&mut self, v: u32) {
+            self.0 |= v & Self::A;
         }
-
-        fn get_field(&self, bit_range: BitRange) -> u32 {
-            get_field(&self.0, bit_range)
+        pub fn set_data_type_raw(&mut self, v: u32) {
+            self.0 |= (v << 12) & Self::B;
         }
-
-        pub fn set_count(&mut self, int: u32) {
-            self.set_field(int, Self::COUNT);
+        pub fn set_flags_raw(&mut self, v: u32) {
+            self.0 |= (v << 16) & Self::C;
+        }
+        pub fn set_space(&mut self, v: u32) {
+            self.0 |= (v << 22) & Self::D;
+        }
+        pub fn set_reserved(&mut self, v: u32) {
+            self.0 |= (v << 23) & Self::E;
         }
 
         pub fn count(&self) -> u32 {
-            self.get_field(Self::COUNT)
+            self.0 & Self::A
         }
 
-        pub fn set_data_type(&mut self, ty: DataType) {
-            self.set_field(ty as u32, Self::DATA_TYPE);
+        pub fn data_type_raw(&self) -> u32 {
+            (self.0 & Self::B) >> 12
         }
 
-        pub fn data_type(&self) -> DataType {
-            DataType::from_u32(self.get_field(Self::DATA_TYPE)).unwrap()
-        }
-
-        pub fn set_flags(&mut self, flags: PropFlag) {
-            self.set_field(flags.bits(), Self::FLAGS);
-        }
-
-        pub fn flags(&self) -> PropFlag {
-            PropFlag::from_bits_retain(self.get_field(Self::FLAGS))
-        }
-
-        pub fn set_space(&mut self, int: u32) {
-            self.set_field(int, Self::SPACE);
+        pub fn flags_raw(&self) -> u32 {
+            (self.0 & Self::C) >> 16
         }
 
         pub fn space(&self) -> u32 {
-            self.get_field(Self::SPACE)
+            (self.0 & Self::D) >> 22
         }
 
         pub fn reserved(&self) -> u32 {
-            self.get_field(Self::RESERVED)
+            (self.0 & Self::E) >> 23
         }
+
+        pub fn set_data_type(&mut self, ty: DataType) {
+            self.set_data_type_raw(ty as u32);
+        }
+
+        pub fn data_type(&self) -> DataType {
+            DataType::from_u32(self.data_type_raw()).unwrap()
+        }
+
+        pub fn set_flags(&mut self, flags: PropFlag) {
+            self.set_flags_raw(flags.bits());
+        }
+
+        pub fn flags(&self) -> PropFlag {
+            PropFlag::from_bits_retain(self.flags_raw())
+        }
+
+        pub fn raw(&self) -> u32 {
+            self.0
+        }
+    }
+
+    #[cfg(test)]
+    #[test]
+    fn props_bitfields() {
+        println!();
+
+        let mut props = ElemProps::default();
+        props.set_count(u32::MAX);
+        println!("{:032b}", props.raw());
+        println!("{:32b}", props.count());
+
+        let mut props = ElemProps::default();
+        props.set_data_type_raw(u32::MAX);
+        println!("{:032b}", props.raw());
+        println!("{:20b}", props.data_type_raw());
+
+        let mut props = ElemProps::default();
+        props.set_flags_raw(u32::MAX);
+        println!("{:032b}", props.raw());
+        println!("{:16b}", props.flags_raw());
+
+        let mut props = ElemProps::default();
+        props.set_space(u32::MAX);
+        println!("{:032b}", props.raw());
+        println!("{:10b}", props.space());
+
+        let mut props = ElemProps::default();
+        props.set_reserved(u32::MAX);
+        println!("{:032b}", props.raw());
+        println!("{:b}", props.reserved());
+
+        println!();
     }
 
     impl std::fmt::Debug for ElemProps {
@@ -407,34 +400,29 @@ pub mod properties {
 
     #[derive(Default, Copy, Clone, PartialEq, Eq)]
     #[allow(non_camel_case_types)]
-    pub struct u18([u8; 4]);
+    pub struct u19(u32);
 
-    impl u18 {
-        const VALUE: BitRange = (0, 18);
-        const RESERVED: BitRange = (19, 31);
-
-        pub fn set_value(&mut self, int: u32) {
-            set_field(&mut self.0, int, Self::VALUE)
-        }
-
-        pub fn value(&self) -> u32 {
-            get_field(&self.0, Self::VALUE)
-        }
-
-        pub fn reserved(&self) -> u32 {
-            get_field(&self.0, Self::RESERVED)
-        }
-    }
-
-    impl u18 {
+    impl u19 {
         pub fn new(id: u32) -> Self {
             let mut this = Self::default();
             this.set_value(id);
             this
         }
+
+        pub fn set_value(&mut self, v: u32) {
+            self.0 = v & 0x0007FFFF;
+        }
+
+        pub fn value(&self) -> u32 {
+            self.0 & 0x0007FFFF
+        }
+
+        pub fn reserved(&self) -> u32 {
+            self.0 & 0xFFF80000
+        }
     }
 
-    impl std::fmt::Debug for u18 {
+    impl std::fmt::Debug for u19 {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "{}", self.value())
         }
@@ -442,34 +430,31 @@ pub mod properties {
 
     #[derive(Default, Copy, Clone, PartialEq, Eq)]
     #[allow(non_camel_case_types)]
-    pub struct u23([u8; 4]);
+    pub struct u24(u32);
 
-    impl u23 {
+    impl u24 {
         pub fn new(id: u32) -> Self {
             let mut this = Self::default();
-            this.set_value(id);
+            this.set(id);
             this
         }
 
-        const VALUE: BitRange = (0, 23);
-        const RESERVED: BitRange = (24, 31);
-
-        pub fn set_value(&mut self, int: u32) {
-            set_field(&mut self.0, int, Self::VALUE)
+        pub fn set(&mut self, v: u32) {
+            self.0 = v & 0x00FFFFFF;
         }
 
-        pub fn value(&self) -> u32 {
-            get_field(&self.0, Self::VALUE)
+        pub fn get(&self) -> u32 {
+            self.0 & 0x00FFFFFF
         }
 
         pub fn reserved(&self) -> u32 {
-            get_field(&self.0, Self::RESERVED)
+            self.0 & 0xFF000000
         }
     }
 
-    impl std::fmt::Debug for u23 {
+    impl std::fmt::Debug for u24 {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.value())
+            write!(f, "{}", self.get())
         }
     }
 }
