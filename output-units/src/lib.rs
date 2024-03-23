@@ -3,6 +3,48 @@ use std::io::Write;
 use bstr::BString;
 use indexmap::IndexMap;
 
+#[derive(Debug, Default)]
+pub struct SvmClass<'a> {
+    fields: IndexMap<&'a str, Option<(BString, BString)>>,
+}
+
+impl<'a> SvmClass<'a> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert(&mut self, field: &'a str) {
+        self.fields.insert(field, None);
+    }
+
+    pub fn new_instance(&self) -> SvmInstance<'a> {
+        SvmInstance {
+            fields: self.fields.clone(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SvmInstance<'a> {
+    fields: IndexMap<&'a str, Option<(BString, BString)>>,
+}
+
+impl<'a> SvmInstance<'a> {
+    pub fn insert(&mut self, field: &'a str, key: impl Into<BString>, text: impl Into<BString>) {
+        self.fields
+            .entry(field)
+            .or_default()
+            .replace((key.into(), text.into()));
+    }
+
+    pub fn iter(self) -> impl Iterator<Item = (&'a str, BString, BString)> {
+        self.fields.into_iter().filter_map(|(field, v)| {
+            let (key, text) = v?;
+            Some((field, key, text))
+        })
+    }
+}
+
 #[derive(Debug)]
 pub struct Block {
     text: BString,
@@ -10,6 +52,8 @@ pub struct Block {
 
 #[derive(Default, Debug)]
 pub struct OutputUnits {
+    // SVM have to be before everything else
+    svm: IndexMap<BString, Block>,
     map: IndexMap<BString, Block>,
 }
 
@@ -18,19 +62,25 @@ impl OutputUnits {
         Self::default()
     }
 
+    pub fn push_svm(&mut self, svm: SvmInstance<'_>) {
+        for (_, key, text) in svm.iter() {
+            self.svm.insert(key, Block { text });
+        }
+    }
+
     pub fn push(&mut self, key: impl Into<BString>, text: impl Into<BString>) {
         self.map.insert(key.into(), Block { text: text.into() });
     }
 
     pub fn encode(&self, mut w: impl Write) -> std::io::Result<()> {
-        let count = self.map.len();
+        let count = self.map.len() + self.svm.len();
         write_header(&mut w, count * 3 + 1)?;
 
         let mut id = 0;
         writeln!(w, "[% zCCSLib 0 {id}]")?;
         writeln!(w, "\tNumOfItems=int:{count}")?;
 
-        for (key, v) in self.map.iter() {
+        for (key, v) in self.svm.iter().chain(self.map.iter()) {
             id += 1;
             writeln!(w, "\t[% zCCSBlock 0 {id}]")?;
 

@@ -2,7 +2,7 @@ use std::io::Write;
 
 use bstr::{BString, ByteSlice};
 use lexer::{DaedalusLexer, Token, TokenError, TokenErrorKind};
-use output_units::OutputUnits;
+use output_units::{OutputUnits, SvmClass};
 
 fn main() {
     let mut units = OutputUnits::new();
@@ -10,7 +10,8 @@ fn main() {
     let mut files = codespan_reporting::files::SimpleFiles::new();
     let mut errors = Vec::new();
 
-    let src = src_file::load("/home/poly/Downloads/G2MDK-PolishScripts-master/Content/Gothic.src");
+    // let src = src_file::load("/home/poly/Downloads/G2MDK-PolishScripts-master/Content/Gothic.src");
+    let src = src_file::load("/home/poly/.local/share/Steam/steamapps/common/Gothic II/_work/Data/Scripts/Content/Gothic.src");
     let files_bytes: Vec<_> = src
         .iter()
         .map(|path| (path, std::fs::read(path).unwrap()))
@@ -20,11 +21,12 @@ fn main() {
         .map(|(path, bytes)| (path, encoding_rs::WINDOWS_1250.decode(bytes).0))
         .collect();
 
+    let mut svm_class = SvmClass::new();
     for (path, src) in files_utf8.iter() {
         let name = path.file_name().unwrap().to_str().unwrap();
         let id = files.add(name, src.as_ref());
 
-        if let Err(err) = load_file(src, &mut units) {
+        if let Err(err) = load_file(src, &mut units, &mut svm_class) {
             errors.push((id, err));
         }
     }
@@ -43,7 +45,11 @@ fn main() {
     }
 }
 
-fn load_file(str: &str, units: &mut OutputUnits) -> Result<(), TokenError> {
+fn load_file<'a>(
+    str: &'a str,
+    units: &mut OutputUnits,
+    svm: &mut SvmClass<'a>,
+) -> Result<(), TokenError> {
     let mut lexer = lexer::DaedalusLexer::new(str);
 
     loop {
@@ -61,6 +67,36 @@ fn load_file(str: &str, units: &mut OutputUnits) -> Result<(), TokenError> {
         };
 
         match token {
+            Token::Class => {
+                lexer.eat_token(Token::Class).unwrap();
+                let ident = lexer.eat_ident().unwrap();
+
+                if ident.to_uppercase() != "C_SVM" {
+                    continue;
+                }
+
+                lexer.eat_token(Token::OpenBrace).unwrap();
+
+                loop {
+                    let token = lexer.eat_one()?;
+
+                    if token == Token::CloseBrace {
+                        break;
+                    }
+
+                    if token != Token::Var {
+                        continue;
+                    }
+
+                    let ty = lexer.eat_ident()?;
+                    if ty != "string" {
+                        continue;
+                    }
+
+                    let ident = lexer.eat_ident()?;
+                    svm.insert(ident);
+                }
+            }
             Token::Ident => {
                 let ident = lexer.eat_ident().unwrap();
 
@@ -81,7 +117,7 @@ fn load_file(str: &str, units: &mut OutputUnits) -> Result<(), TokenError> {
                     continue;
                 }
 
-                parse_svm_block(&mut lexer, units)?;
+                parse_svm_block(&mut lexer, units, svm)?;
             }
             _ => {
                 lexer.eat_one().ok();
@@ -118,7 +154,11 @@ fn parse_ai_output(lexer: &mut DaedalusLexer, units: &mut OutputUnits) -> Result
     Ok(())
 }
 
-fn parse_svm_block(lexer: &mut DaedalusLexer, units: &mut OutputUnits) -> Result<(), TokenError> {
+fn parse_svm_block<'a>(
+    lexer: &mut DaedalusLexer<'a>,
+    units: &mut OutputUnits,
+    svm: &mut SvmClass<'a>,
+) -> Result<(), TokenError> {
     lexer.eat_token(Token::OpenBrace).unwrap();
 
     fn handle_nest_level(level: &mut usize, token: &Token) {
@@ -133,17 +173,20 @@ fn parse_svm_block(lexer: &mut DaedalusLexer, units: &mut OutputUnits) -> Result
         }
     }
 
+    let mut svm_instance = svm.new_instance();
     let mut nest_level = 1;
     loop {
         if nest_level == 0 {
             break;
         }
 
-        let token = lexer.eat_one().unwrap();
-        handle_nest_level(&mut nest_level, &token);
-        if token != Token::Ident {
+        let field = if lexer.peek()? == Token::Ident {
+            lexer.eat_ident()?
+        } else {
+            let token = lexer.eat_one().unwrap();
+            handle_nest_level(&mut nest_level, &token);
             continue;
-        }
+        };
 
         let token = lexer.eat_one().unwrap();
         handle_nest_level(&mut nest_level, &token);
@@ -165,11 +208,12 @@ fn parse_svm_block(lexer: &mut DaedalusLexer, units: &mut OutputUnits) -> Result
             None
         };
 
-        let (id, _, _) = encoding_rs::WINDOWS_1250.encode(id);
+        let (key, _, _) = encoding_rs::WINDOWS_1250.encode(id);
         let (text, _, _) = encoding_rs::WINDOWS_1250.encode(text.unwrap_or(""));
-
-        units.push(id.as_bstr(), text.as_bstr());
+        svm_instance.insert(field, key.as_ref(), text.as_ref());
     }
+
+    units.push_svm(svm_instance);
 
     Ok(())
 }
