@@ -5,3 +5,12 @@ edition = "2021"
 
 [dependencies]
 bstr.workspace = true
+lexer.workspace = true
+src-file.workspace = true
+encoding_rs.workspace = true
+indexmap = "2.2.5"
+
+codespan-reporting.workspace = true
+
+[dev-dependencies]
+zenkit.workspace = true

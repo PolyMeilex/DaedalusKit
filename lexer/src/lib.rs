@@ -83,7 +83,7 @@ pub enum Token {
     #[token("return")]
     Return,
 
-    #[regex("[-a-zA-Z_][a-zA-Z0-9_-]*", priority = 1)]
+    #[regex(r"(\p{XID_Start}|_)\p{XID_Continue}*", priority = 1)]
     Ident,
     #[regex("[+-]?[0-9_]+", priority = 2)]
     Integer,
@@ -121,12 +121,16 @@ pub enum Token {
     Gt,
     #[token("+")]
     Plus,
+    #[token("-")]
+    Minus,
     #[token(".")]
     Dot,
     #[token("!")]
     Bang,
     #[token("*")]
     Star,
+    #[token("/")]
+    Slash,
 }
 
 impl std::fmt::Display for Token {
@@ -162,9 +166,11 @@ impl std::fmt::Display for Token {
             Token::Lt => "'<'",
             Token::Gt => "'>'",
             Token::Plus => "'+'",
+            Token::Minus => "'-'",
             Token::Dot => "'.'",
             Token::Bang => "'!'",
             Token::Star => "'*'",
+            Token::Slash => "/",
         };
         write!(f, "{str}")
     }
@@ -238,17 +244,7 @@ impl<'a> DaedalusLexer<'a> {
     }
 
     pub fn peek_raw(&mut self) -> Result<Token, TokenError> {
-        let peek = self.lexer.clone().next();
-
-        let Some(peek) = peek else {
-            return Err(TokenError::eof(self.span()));
-        };
-
-        let Ok(peek) = peek else {
-            return Err(TokenError::unkonown_token(self.span()));
-        };
-
-        Ok(peek)
+        self.clone().eat_one_raw()
     }
 
     pub fn eat_one_raw(&mut self) -> Result<Token, TokenError> {
@@ -261,6 +257,15 @@ impl<'a> DaedalusLexer<'a> {
         };
 
         Ok(token)
+    }
+
+    pub fn eat_token_raw(&mut self, expected: Token) -> Result<(), TokenError> {
+        let got = self.eat_one_raw()?;
+        if got == expected {
+            Ok(())
+        } else {
+            Err(TokenError::expected_token(got, expected, self.lexer.span()))
+        }
     }
 
     pub fn peek_with_comments(&mut self) -> Result<Token, TokenError> {
@@ -281,6 +286,19 @@ impl<'a> DaedalusLexer<'a> {
     pub fn eat_ident(&mut self) -> Result<&'a str, TokenError> {
         self.eat_token(Token::Ident)?;
         Ok(self.lexer.slice())
+    }
+
+    pub fn eat_string(&mut self) -> Result<&'a str, TokenError> {
+        self.eat_token(Token::String)?;
+        let str = &self.lexer.slice()[1..];
+        let str = &str[..str.len() - 1];
+        Ok(str)
+    }
+
+    pub fn eat_line_comment(&mut self) -> Result<&'a str, TokenError> {
+        self.eat_token_raw(Token::LineComment)?;
+        let str = &self.lexer.slice()[2..];
+        Ok(str)
     }
 
     pub fn eat_token(&mut self, expected: Token) -> Result<(), TokenError> {

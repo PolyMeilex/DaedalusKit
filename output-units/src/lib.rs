@@ -1,6 +1,7 @@
-use std::{collections::HashMap, io::Write};
+use std::io::Write;
 
 use bstr::BString;
+use indexmap::IndexMap;
 
 #[derive(Debug)]
 pub struct Block {
@@ -9,7 +10,7 @@ pub struct Block {
 
 #[derive(Default, Debug)]
 pub struct OutputUnits {
-    map: HashMap<BString, Block>,
+    map: IndexMap<BString, Block>,
 }
 
 impl OutputUnits {

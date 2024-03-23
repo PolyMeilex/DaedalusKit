@@ -25,6 +25,10 @@ extern "C" {
     fn ZkCutsceneLibrary_loadPath(buf: *const c_char) -> *mut ZkCutsceneLibrary;
     fn ZkCutsceneLibrary_del(slf: *mut ZkCutsceneLibrary);
     fn ZkCutsceneLibrary_getBlockCount(slf: *const ZkCutsceneLibrary) -> u64;
+    fn ZkCutsceneLibrary_getBlock(
+        slf: *const ZkCutsceneLibrary,
+        name: *const c_char,
+    ) -> *const ZkCutsceneBlock;
     fn ZkCutsceneLibrary_getBlockByIndex(
         slf: *const ZkCutsceneLibrary,
         id: u64,
@@ -51,6 +55,15 @@ impl CutsceneLibrary {
 
     pub fn block_count(&self) -> u64 {
         unsafe { ZkCutsceneLibrary_getBlockCount(self.0) }
+    }
+
+    pub fn block_by_name(&self, name: &CStr) -> Option<CutsceneBlock> {
+        let block = unsafe { ZkCutsceneLibrary_getBlock(self.0, name.as_ptr()) };
+        if block.is_null() {
+            None
+        } else {
+            Some(CutsceneBlock(block, PhantomData))
+        }
     }
 
     pub fn block_by_index(&self, id: u64) -> Option<CutsceneBlock> {

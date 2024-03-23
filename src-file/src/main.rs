@@ -1,12 +1,10 @@
-use bstr::{BString, ByteSlice};
-
 fn main() {
-    let file = std::fs::read("/home/poly/Gothic2/_work/Data/Scripts/Content/Gothic.src").unwrap();
-    let file = BString::new(file);
+    // for line in src_file::load("/home/poly/Gothic2/_work/Data/Scripts/Content/Gothic.src") {
+    //     println!("{line:?}");
+    // }
 
-    let lines = src_file::lines(file.as_bstr());
-
-    for line in lines {
-        println!("{line}");
+    for line in src_file::load("/home/poly/Downloads/G2MDK-PolishScripts-master/Content/Gothic.src")
+    {
+        println!("{line:?}");
     }
 }
