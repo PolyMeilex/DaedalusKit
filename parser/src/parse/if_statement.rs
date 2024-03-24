@@ -5,26 +5,30 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
-use super::Block;
+use super::{Block, Expr};
 
 #[derive(Debug)]
 pub struct IfStatement<'a> {
     pub has_else: bool,
     pub has_if: bool,
     pub block: Block<'a>,
-    pub condition: Option<&'a str>,
+    pub condition: Option<Expr<'a>>,
     pub next: Option<Box<IfStatement<'a>>>,
 }
 
 impl<'a> DaedalusDisplay for IfStatement<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        if let Some(condition) = self.condition {
+        if let Some(condition) = self.condition.as_ref() {
             if self.has_else {
-                write!(f, " else if({condition}) ")?;
+                write!(f, " else if(")?;
             } else {
                 f.write_indent()?;
-                write!(f, "if({condition}) ")?;
+                write!(f, "if(")?;
             }
+
+            condition.fmt(f)?;
+
+            write!(f, ") ")?;
         } else if self.has_else {
             write!(f, " else ")?;
         }
@@ -80,32 +84,10 @@ impl<'a> IfStatement<'a> {
         })
     }
 
-    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<&'a str, ParseError> {
+    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<Expr<'a>, ParseError> {
         lexer.eat_token(Token::OpenParen)?;
-
-        let start = lexer.span().end;
-
-        let mut nest = 1;
-        loop {
-            match lexer.eat_any()? {
-                Token::OpenParen => {
-                    nest += 1;
-                }
-                Token::CloseParen => {
-                    nest -= 1;
-
-                    if nest == 0 {
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        let end = lexer.span().start;
-
-        let str = lexer.inner().source().get(start..end).unwrap();
-
-        Ok(str)
+        let expr = Expr::parse(lexer)?;
+        lexer.eat_token(Token::CloseParen)?;
+        Ok(expr)
     }
 }

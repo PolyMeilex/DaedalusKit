@@ -27,6 +27,9 @@ pub use assign_statement::AssignStatement;
 mod class;
 pub use class::Class;
 
+mod expr;
+pub use expr::Expr;
+
 use crate::ParseError;
 
 pub enum Item<'a> {

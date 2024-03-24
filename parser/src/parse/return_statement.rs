@@ -5,15 +5,19 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
+use super::Expr;
+
 #[derive(Debug)]
 pub struct ReturnStatement<'a> {
-    pub args: &'a str,
+    pub expr: Expr<'a>,
 }
 
 impl<'a> DaedalusDisplay for ReturnStatement<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         f.write_indent()?;
-        writeln!(f, "return {};", self.args)?;
+        write!(f, "return ")?;
+        self.expr.fmt(f)?;
+        writeln!(f, ";")?;
         Ok(())
     }
 }
@@ -22,24 +26,9 @@ impl<'a> ReturnStatement<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Return)?;
 
-        let args = Self::parse_args(lexer)?;
+        let expr = Expr::parse(lexer)?;
+        lexer.eat_token(Token::Semi)?;
 
-        Ok(Self { args })
-    }
-
-    fn parse_args(lexer: &mut DaedalusLexer<'a>) -> Result<&'a str, ParseError> {
-        let start = lexer.span().end;
-
-        loop {
-            if lexer.eat_any()? == Token::Semi {
-                break;
-            }
-        }
-
-        let end = lexer.span().start;
-
-        let str = lexer.inner().source().get(start..end).unwrap();
-
-        Ok(str)
+        Ok(Self { expr })
     }
 }

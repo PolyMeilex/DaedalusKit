@@ -35,7 +35,9 @@ impl<'a> DaedalusDisplay for Block<'a> {
                     i.fmt(f)?;
                 }
                 BlockItem::FnCall(call) => {
+                    f.write_indent()?;
                     call.fmt(f)?;
+                    writeln!(f, ";")?;
                 }
                 BlockItem::Return(ret) => {
                     ret.fmt(f)?;
@@ -91,6 +93,7 @@ impl<'a> Block<'a> {
                     match tmp.peek()? {
                         Token::OpenParen => {
                             items.push(BlockItem::FnCall(FunctionCall::parse(lexer)?));
+                            lexer.eat_token(Token::Semi)?;
                             continue;
                         }
                         Token::Eq => {

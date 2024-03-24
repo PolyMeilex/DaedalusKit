@@ -5,21 +5,25 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
+use super::Expr;
+
 #[derive(Debug)]
 pub struct FunctionCall<'a> {
     pub ident: &'a str,
-    pub args: &'a str,
-    pub trailing_comment: Option<&'a str>,
+    pub args: Vec<Expr<'a>>,
 }
 
 impl<'a> DaedalusDisplay for FunctionCall<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        f.write_indent()?;
-        write!(f, "{}({});", self.ident, self.args)?;
-        if let Some(comment) = self.trailing_comment {
-            write!(f, " {}", comment)?;
+        write!(f, "{}(", self.ident)?;
+        let mut iter = self.args.iter().peekable();
+        while let Some(arg) = iter.next() {
+            arg.fmt(f)?;
+            if iter.peek().is_some() {
+                write!(f, ", ")?;
+            }
         }
-        writeln!(f)?;
+        write!(f, ")")?;
         Ok(())
     }
 }
@@ -30,49 +34,37 @@ impl<'a> FunctionCall<'a> {
 
         let args = Self::parse_paren(lexer)?;
 
-        lexer.eat_token(Token::Semi)?;
-
-        let trailing_comment = if lexer.peek_with_comments().ok() == Some(Token::LineComment) {
-            lexer.eat_one_raw()?;
-            let src = lexer.inner().slice();
-            Some(src)
-        } else {
-            None
-        };
-
-        Ok(Self {
-            ident,
-            args,
-            trailing_comment,
-        })
+        Ok(Self { ident, args })
     }
 
-    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<&'a str, ParseError> {
+    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<Vec<Expr<'a>>, ParseError> {
+        let mut out = Vec::new();
+
         lexer.eat_token(Token::OpenParen)?;
 
-        let start = lexer.span().end;
+        if lexer.peek()? != Token::CloseParen {
+            let expr = Expr::parse(lexer)?;
+            out.push(expr);
+        }
 
-        let mut nest = 1;
         loop {
-            match lexer.eat_any()? {
-                Token::OpenParen => {
-                    nest += 1;
-                }
+            match lexer.peek()? {
                 Token::CloseParen => {
-                    nest -= 1;
-
-                    if nest == 0 {
-                        break;
-                    }
+                    lexer.eat_token(Token::CloseParen)?;
+                    break;
                 }
-                _ => {}
+                Token::Comma => {
+                    lexer.eat_token(Token::Comma)?;
+                    let expr = Expr::parse(lexer)?;
+                    out.push(expr);
+                }
+                got => {
+                    lexer.eat_any()?;
+                    return Err(ParseError::unexpeced_token(got, lexer.span()));
+                }
             }
         }
 
-        let end = lexer.span().start;
-
-        let str = lexer.inner().source().get(start..end).unwrap();
-
-        Ok(str)
+        Ok(out)
     }
 }

@@ -3,7 +3,7 @@
 use std::process::exit;
 
 use fmt::DaedalusFormatter;
-use lexer::{DaedalusLexer, Token, TokenErrorKind};
+use lexer::DaedalusLexer;
 
 use crate::parse::Item;
 
@@ -64,31 +64,37 @@ fn emit_error(src: &str, err: &ParseError) {
     let mut labels =
         vec![Label::primary(file_id, err.span().clone()).with_message(err.to_string())];
 
-    match &err.kind {
-        TokenErrorKind::ExpectedToken {
-            expected: Token::Semi,
-            ..
-        } => {
-            let mut secondary = err.span().clone();
-
-            let slice = src.get(0..secondary.start).unwrap();
-
-            let mut offset = secondary.start;
-            for (id, ch) in slice.char_indices().rev() {
-                if !ch.is_whitespace() {
-                    offset = id + 1;
-                    break;
-                }
-            }
-
-            secondary.start = offset;
-            secondary.end = offset;
-
-            labels
-                .push(Label::secondary(file_id, secondary).with_message("Try to insert ',' here"));
-        }
-        _ => {}
+    if err.backtrace().status() == std::backtrace::BacktraceStatus::Captured {
+        labels.push(
+            Label::secondary(file_id, err.span().clone()).with_message(err.backtrace().to_string()),
+        );
     }
+
+    // match &err.kind {
+    //     TokenErrorKind::ExpectedToken {
+    //         expected: Token::Semi,
+    //         ..
+    //     } => {
+    //         let mut secondary = err.span().clone();
+    //
+    //         let slice = src.get(0..secondary.start).unwrap();
+    //
+    //         let mut offset = secondary.start;
+    //         for (id, ch) in slice.char_indices().rev() {
+    //             if !ch.is_whitespace() {
+    //                 offset = id + 1;
+    //                 break;
+    //             }
+    //         }
+    //
+    //         secondary.start = offset;
+    //         secondary.end = offset;
+    //
+    //         labels
+    //             .push(Label::secondary(file_id, secondary).with_message("Try to insert ',' here"));
+    //     }
+    //     _ => {}
+    // }
 
     let diagnostic = Diagnostic::error()
         .with_message(err.to_string())

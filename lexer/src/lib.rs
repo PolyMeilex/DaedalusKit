@@ -12,11 +12,14 @@ pub enum TokenErrorKind {
     EOF,
 }
 
+type LexBacktrace = std::backtrace::Backtrace;
+
 #[derive(Debug, thiserror::Error)]
 #[error("{kind} {span:?}")]
 pub struct TokenError {
     pub kind: TokenErrorKind,
     pub span: logos::Span,
+    backtrace: LexBacktrace,
 }
 
 impl TokenError {
@@ -24,6 +27,7 @@ impl TokenError {
         Self {
             kind: TokenErrorKind::EOF,
             span,
+            backtrace: LexBacktrace::capture(),
         }
     }
 
@@ -31,6 +35,7 @@ impl TokenError {
         Self {
             kind: TokenErrorKind::UnkonownToken,
             span,
+            backtrace: LexBacktrace::capture(),
         }
     }
 
@@ -38,6 +43,7 @@ impl TokenError {
         Self {
             kind: TokenErrorKind::UnexpecedToken { got },
             span,
+            backtrace: LexBacktrace::capture(),
         }
     }
 
@@ -45,11 +51,16 @@ impl TokenError {
         Self {
             kind: TokenErrorKind::ExpectedToken { got, expected },
             span,
+            backtrace: LexBacktrace::capture(),
         }
     }
 
     pub fn span(&self) -> &logos::Span {
         &self.span
+    }
+
+    pub fn backtrace(&self) -> &LexBacktrace {
+        &self.backtrace
     }
 }
 
@@ -87,6 +98,8 @@ pub enum Token {
     Ident,
     #[regex("[+-]?[0-9_]+", priority = 2)]
     Integer,
+    #[regex(r"[-+]?([0-9_]+(\.[0-9_]+)?([eE][+-]?[0-9_]+)?|nan|inf)", priority = 3)]
+    Float,
     #[regex("\"", lex_string)]
     String,
 
@@ -109,16 +122,28 @@ pub enum Token {
     Semi,
     #[token("=")]
     Eq,
+    #[token("==")]
+    EqEq,
+    #[token("!=")]
+    NotEq,
     #[token(",")]
     Comma,
-    #[token("&")]
+    #[token("&&")]
     And,
-    #[token("|")]
+    #[token("&")]
+    BitAnd,
+    #[token("||")]
     Or,
+    #[token("|")]
+    BitOr,
     #[token("<")]
     Lt,
+    #[token("<=")]
+    Lte,
     #[token(">")]
     Gt,
+    #[token(">=")]
+    Gte,
     #[token("+")]
     Plus,
     #[token("-")]
@@ -151,6 +176,7 @@ impl std::fmt::Display for Token {
             Token::Return => "'return'",
             Token::Ident => "identifier",
             Token::Integer => "intager",
+            Token::Float => "float",
             Token::String => "string",
             Token::OpenBrace => "'{'",
             Token::CloseBrace => "'}'",
@@ -160,11 +186,17 @@ impl std::fmt::Display for Token {
             Token::CloseBracket => "']'",
             Token::Semi => "';'",
             Token::Eq => "'='",
+            Token::EqEq => "'=='",
+            Token::NotEq => "'!='",
             Token::Comma => "','",
-            Token::And => "'&'",
-            Token::Or => "'|'",
+            Token::And => "'&&'",
+            Token::BitAnd => "'&'",
+            Token::Or => "'||'",
+            Token::BitOr => "'|'",
             Token::Lt => "'<'",
+            Token::Lte => "'<='",
             Token::Gt => "'>'",
+            Token::Gte => "'>='",
             Token::Plus => "'+'",
             Token::Minus => "'-'",
             Token::Dot => "'.'",
