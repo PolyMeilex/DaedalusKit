@@ -283,28 +283,22 @@ impl<'a> DaedalusLexer<'a> {
         self.eat_one_raw()
     }
 
-    pub fn eat_ident(&mut self) -> Result<&'a str, TokenError> {
-        self.eat_token(Token::Ident)?;
-        Ok(self.lexer.slice())
-    }
-
-    pub fn eat_string(&mut self) -> Result<&'a str, TokenError> {
-        self.eat_token(Token::String)?;
-        let str = &self.lexer.slice()[1..];
-        let str = &str[..str.len() - 1];
-        Ok(str)
-    }
-
     pub fn eat_line_comment(&mut self) -> Result<&'a str, TokenError> {
         self.eat_token_raw(Token::LineComment)?;
         let str = &self.lexer.slice()[2..];
         Ok(str)
     }
 
-    pub fn eat_token(&mut self, expected: Token) -> Result<(), TokenError> {
+    pub fn eat_token(&mut self, expected: Token) -> Result<&'a str, TokenError> {
         let got = self.eat_one()?;
         if got == expected {
-            Ok(())
+            if expected == Token::String {
+                let str = &self.lexer.slice()[1..];
+                let str = &str[..str.len() - 1];
+                Ok(str)
+            } else {
+                Ok(self.lexer.slice())
+            }
         } else {
             Err(TokenError::expected_token(got, expected, self.lexer.span()))
         }

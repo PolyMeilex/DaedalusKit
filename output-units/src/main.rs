@@ -68,8 +68,8 @@ fn load_file<'a>(
 
         match token {
             Token::Class => {
-                lexer.eat_token(Token::Class).unwrap();
-                let ident = lexer.eat_ident().unwrap();
+                lexer.eat_token(Token::Class)?;
+                let ident = lexer.eat_token(Token::Ident)?;
 
                 if ident.to_uppercase() != "C_SVM" {
                     continue;
@@ -88,17 +88,17 @@ fn load_file<'a>(
                         continue;
                     }
 
-                    let ty = lexer.eat_ident()?;
+                    let ty = lexer.eat_token(Token::Ident)?;
                     if ty != "string" {
                         continue;
                     }
 
-                    let ident = lexer.eat_ident()?;
+                    let ident = lexer.eat_token(Token::Ident)?;
                     svm.insert(ident);
                 }
             }
             Token::Ident => {
-                let ident = lexer.eat_ident().unwrap();
+                let ident = lexer.eat_token(Token::Ident)?;
 
                 if ident.to_uppercase() != "AI_OUTPUT" {
                     continue;
@@ -107,10 +107,10 @@ fn load_file<'a>(
                 parse_ai_output(&mut lexer, units)?;
             }
             Token::Instance => {
-                lexer.eat_token(Token::Instance).unwrap();
-                lexer.eat_ident().unwrap();
-                lexer.eat_token(Token::OpenParen).unwrap();
-                let ident = lexer.eat_ident().unwrap();
+                lexer.eat_token(Token::Instance)?;
+                lexer.eat_token(Token::Ident)?;
+                lexer.eat_token(Token::OpenParen)?;
+                let ident = lexer.eat_token(Token::Ident)?;
                 lexer.eat_token(Token::CloseParen).unwrap();
 
                 if ident.to_uppercase() != "C_SVM" {
@@ -133,7 +133,7 @@ fn parse_ai_output(lexer: &mut DaedalusLexer, units: &mut OutputUnits) -> Result
     lexer.eat_while(|token| *token != Token::Comma);
     lexer.eat_token(Token::Comma).unwrap();
 
-    let id = lexer.eat_string().unwrap();
+    let id = lexer.eat_token(Token::String)?;
 
     lexer.eat_token(Token::CloseParen).unwrap();
 
@@ -181,7 +181,7 @@ fn parse_svm_block<'a>(
         }
 
         let field = if lexer.peek()? == Token::Ident {
-            lexer.eat_ident()?
+            lexer.eat_token(Token::Ident)?
         } else {
             let token = lexer.eat_one().unwrap();
             handle_nest_level(&mut nest_level, &token);
@@ -198,7 +198,7 @@ fn parse_svm_block<'a>(
             continue;
         }
 
-        let id = lexer.eat_string()?;
+        let id = lexer.eat_token(Token::String)?;
 
         lexer.eat_token(Token::Semi).unwrap();
 

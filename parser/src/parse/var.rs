@@ -24,8 +24,8 @@ impl<'a> VarDeclaration<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Var)?;
 
-        let ty = lexer.eat_ident()?;
-        let ident = lexer.eat_ident()?;
+        let ty = lexer.eat_token(Token::Ident)?;
+        let ident = lexer.eat_token(Token::Ident)?;
 
         lexer.eat_token(Token::Semi)?;
 

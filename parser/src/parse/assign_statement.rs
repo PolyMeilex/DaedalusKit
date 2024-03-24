@@ -21,7 +21,7 @@ impl<'a> DaedalusDisplay for AssignStatement<'a> {
 
 impl<'a> AssignStatement<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
-        let a = lexer.eat_ident()?;
+        let a = lexer.eat_token(Token::Ident)?;
         lexer.eat_token(Token::Eq)?;
         let b = Self::parse_right(lexer)?;
 

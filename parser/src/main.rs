@@ -26,6 +26,13 @@ fn main() {
 
     while let Ok(token) = lexer.peek() {
         match token {
+            Token::Class => {
+                if let Ok(instance) = parse::Class::parse(&mut lexer).inspect_err(emit_error) {
+                    formatter.format(instance).unwrap();
+                } else {
+                    exit(1);
+                }
+            }
             Token::Instance => {
                 if let Ok(instance) = parse::Instance::parse(&mut lexer).inspect_err(emit_error) {
                     formatter.format(instance).unwrap();

@@ -28,8 +28,8 @@ impl<'a> FunctionDefinition<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Func)?;
 
-        let ty = lexer.eat_ident()?;
-        let ident = lexer.eat_ident()?;
+        let ty = lexer.eat_token(Token::Ident)?;
+        let ident = lexer.eat_token(Token::Ident)?;
 
         lexer.eat_token(Token::OpenParen)?;
         lexer.eat_token(Token::CloseParen)?;

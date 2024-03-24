@@ -26,7 +26,7 @@ impl<'a> DaedalusDisplay for FunctionCall<'a> {
 
 impl<'a> FunctionCall<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
-        let ident = lexer.eat_ident()?;
+        let ident = lexer.eat_token(Token::Ident)?;
 
         let args = Self::parse_paren(lexer)?;
 

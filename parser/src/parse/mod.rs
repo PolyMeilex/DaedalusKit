@@ -21,3 +21,6 @@ pub use return_statement::ReturnStatement;
 
 mod assign_statement;
 pub use assign_statement::AssignStatement;
+
+mod class;
+pub use class::Class;
