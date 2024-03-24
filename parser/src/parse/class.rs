@@ -15,13 +15,12 @@ pub struct Field<'a> {
 #[derive(Debug)]
 pub struct Class<'a> {
     pub ident: &'a str,
-    pub parent: &'a str,
     pub fields: Vec<Field<'a>>,
 }
 
 impl<'a> DaedalusDisplay for Class<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        writeln!(f, "class {}({}) {{", self.ident, self.parent)?;
+        writeln!(f, "class {} {{", self.ident)?;
 
         f.push_indent();
         for Field { ident, ty, arr } in self.fields.iter() {
@@ -43,15 +42,9 @@ impl<'a> DaedalusDisplay for Class<'a> {
 
 impl<'a> Class<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::Instance)?;
+        lexer.eat_token(Token::Class)?;
 
         let ident = lexer.eat_token(Token::Ident)?;
-
-        lexer.eat_token(Token::OpenParen)?;
-
-        let parent = lexer.eat_token(Token::Ident)?;
-
-        lexer.eat_token(Token::CloseParen)?;
 
         lexer.eat_token(Token::OpenBrace)?;
 
@@ -67,11 +60,7 @@ impl<'a> Class<'a> {
         lexer.eat_token(Token::CloseBrace)?;
         lexer.eat_token(Token::Semi)?;
 
-        Ok(Self {
-            ident,
-            parent,
-            fields,
-        })
+        Ok(Self { ident, fields })
     }
 
     fn parse_field(lexer: &mut DaedalusLexer<'a>) -> Result<Field<'a>, ParseError> {
@@ -88,6 +77,7 @@ impl<'a> Class<'a> {
                 if lexer.peek()? == Token::CloseBracket {
                     break;
                 }
+                lexer.eat_any()?;
             }
             let end = lexer.span().start;
             let str = lexer.inner().source().get(start..end).unwrap();
