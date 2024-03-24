@@ -78,7 +78,7 @@ fn load_file<'a>(
                 lexer.eat_token(Token::OpenBrace).unwrap();
 
                 loop {
-                    let token = lexer.eat_one()?;
+                    let token = lexer.eat_any()?;
 
                     if token == Token::CloseBrace {
                         break;
@@ -120,7 +120,7 @@ fn load_file<'a>(
                 parse_svm_block(&mut lexer, units, svm)?;
             }
             _ => {
-                lexer.eat_one().ok();
+                lexer.eat_any().ok();
             }
         }
     }
@@ -183,12 +183,12 @@ fn parse_svm_block<'a>(
         let field = if lexer.peek()? == Token::Ident {
             lexer.eat_token(Token::Ident)?
         } else {
-            let token = lexer.eat_one().unwrap();
+            let token = lexer.eat_any().unwrap();
             handle_nest_level(&mut nest_level, &token);
             continue;
         };
 
-        let token = lexer.eat_one().unwrap();
+        let token = lexer.eat_any().unwrap();
         handle_nest_level(&mut nest_level, &token);
         if token != Token::Eq {
             continue;

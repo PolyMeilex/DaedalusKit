@@ -57,7 +57,7 @@ fn main() {
                 }
             }
             _ => {
-                lexer.eat_one().unwrap();
+                lexer.eat_any().unwrap();
             }
         }
     }

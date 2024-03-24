@@ -86,7 +86,7 @@ impl<'a> Block<'a> {
                 }
                 Token::Ident => {
                     let mut tmp = lexer.clone();
-                    tmp.eat_one()?;
+                    tmp.eat_any()?;
 
                     match tmp.peek()? {
                         Token::OpenParen => {
@@ -103,7 +103,7 @@ impl<'a> Block<'a> {
                 _ => {}
             }
 
-            lexer.eat_one()?;
+            lexer.eat_any()?;
         }
 
         lexer.eat_token(Token::CloseBrace)?;

@@ -278,7 +278,7 @@ impl<'a> DaedalusLexer<'a> {
         self.peek_raw()
     }
 
-    pub fn eat_one(&mut self) -> Result<Token, TokenError> {
+    pub fn eat_any(&mut self) -> Result<Token, TokenError> {
         self.eat_whitespace();
         self.eat_one_raw()
     }
@@ -290,7 +290,7 @@ impl<'a> DaedalusLexer<'a> {
     }
 
     pub fn eat_token(&mut self, expected: Token) -> Result<&'a str, TokenError> {
-        let got = self.eat_one()?;
+        let got = self.eat_any()?;
         if got == expected {
             if expected == Token::String {
                 let str = &self.lexer.slice()[1..];

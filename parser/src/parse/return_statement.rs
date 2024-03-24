@@ -31,7 +31,7 @@ impl<'a> ReturnStatement<'a> {
         let start = lexer.span().end;
 
         loop {
-            if lexer.eat_one()? == Token::Semi {
+            if lexer.eat_any()? == Token::Semi {
                 break;
             }
         }

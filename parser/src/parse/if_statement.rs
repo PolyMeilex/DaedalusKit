@@ -87,7 +87,7 @@ impl<'a> IfStatement<'a> {
 
         let mut nest = 1;
         loop {
-            match lexer.eat_one()? {
+            match lexer.eat_any()? {
                 Token::OpenParen => {
                     nest += 1;
                 }
