@@ -1,8 +1,10 @@
+use lexer::{DaedalusLexer, Token};
+
 mod instance;
 pub use instance::Instance;
 
 mod var;
-pub use var::VarDeclaration;
+pub use var::Var;
 
 mod func;
 pub use func::FunctionDefinition;
@@ -24,3 +26,44 @@ pub use assign_statement::AssignStatement;
 
 mod class;
 pub use class::Class;
+
+use crate::ParseError;
+
+pub enum Item<'a> {
+    Class(Class<'a>),
+    Instance(Instance<'a>),
+    Var(Var<'a>),
+    Func(FunctionDefinition<'a>),
+}
+
+pub struct File<'a> {
+    pub items: Vec<Item<'a>>,
+}
+
+impl<'a> File<'a> {
+    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+        let mut items = Vec::new();
+
+        while let Ok(token) = lexer.peek() {
+            match token {
+                Token::Class => {
+                    items.push(Item::Class(Class::parse(lexer)?));
+                }
+                Token::Instance => {
+                    items.push(Item::Instance(Instance::parse(lexer)?));
+                }
+                Token::Var => {
+                    items.push(Item::Var(Var::parse(lexer)?));
+                }
+                Token::Func => {
+                    items.push(Item::Func(FunctionDefinition::parse(lexer)?));
+                }
+                _ => {
+                    lexer.eat_any().unwrap();
+                }
+            }
+        }
+
+        Ok(Self { items })
+    }
+}

@@ -5,11 +5,11 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
-use super::{AssignStatement, FunctionCall, IfStatement, ReturnStatement, VarDeclaration};
+use super::{AssignStatement, FunctionCall, IfStatement, ReturnStatement, Var};
 
 #[derive(Debug)]
 pub enum BlockItem<'a> {
-    Var(VarDeclaration<'a>),
+    Var(Var<'a>),
     If(IfStatement<'a>),
     FnCall(FunctionCall<'a>),
     Return(ReturnStatement<'a>),
@@ -73,7 +73,7 @@ impl<'a> Block<'a> {
                     }
                 }
                 Token::Var => {
-                    items.push(BlockItem::Var(VarDeclaration::parse(lexer)?));
+                    items.push(BlockItem::Var(Var::parse(lexer)?));
                     continue;
                 }
                 Token::If => {

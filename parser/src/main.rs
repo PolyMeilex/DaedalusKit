@@ -5,6 +5,8 @@ use std::process::exit;
 use fmt::DaedalusFormatter;
 use lexer::{DaedalusLexer, Token, TokenErrorKind};
 
+use crate::parse::Item;
+
 mod fmt;
 pub mod parse;
 
@@ -15,7 +17,6 @@ fn main() {
     let bytes = include_bytes!("../../DIA_bau_950_lobart.d");
     // let bytes = include_bytes!("../../lobart.d");
 
-    // let bytes = include_bytes!("../a1.d");
     let (src, enc, _) = encoding_rs::WINDOWS_1250.decode(bytes);
     dbg!(enc);
 
@@ -24,40 +25,27 @@ fn main() {
     let emit_error = |err: &ParseError| emit_error(&src, err);
     let mut formatter = DaedalusFormatter::default();
 
-    while let Ok(token) = lexer.peek() {
-        match token {
-            Token::Class => {
-                if let Ok(instance) = parse::Class::parse(&mut lexer).inspect_err(emit_error) {
-                    formatter.format(instance).unwrap();
-                } else {
-                    exit(1);
-                }
+    let file = match parse::File::parse(&mut lexer) {
+        Ok(file) => file,
+        Err(err) => {
+            emit_error(&err);
+            exit(1);
+        }
+    };
+
+    for item in file.items {
+        match item {
+            Item::Class(v) => {
+                formatter.format(v).unwrap();
             }
-            Token::Instance => {
-                if let Ok(instance) = parse::Instance::parse(&mut lexer).inspect_err(emit_error) {
-                    formatter.format(instance).unwrap();
-                } else {
-                    exit(1);
-                }
+            Item::Instance(v) => {
+                formatter.format(v).unwrap();
             }
-            Token::Var => {
-                if let Ok(var) = parse::VarDeclaration::parse(&mut lexer).inspect_err(emit_error) {
-                    formatter.format(var).unwrap();
-                } else {
-                    exit(1);
-                }
+            Item::Var(v) => {
+                formatter.format(v).unwrap();
             }
-            Token::Func => {
-                if let Ok(func) =
-                    parse::FunctionDefinition::parse(&mut lexer).inspect_err(emit_error)
-                {
-                    formatter.format(func).unwrap();
-                } else {
-                    exit(1);
-                }
-            }
-            _ => {
-                lexer.eat_any().unwrap();
+            Item::Func(v) => {
+                formatter.format(v).unwrap();
             }
         }
     }
