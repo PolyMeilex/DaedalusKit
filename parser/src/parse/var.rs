@@ -28,8 +28,6 @@ impl<'a> DaedalusDisplay for Var<'a> {
             write!(f, "]")?;
         }
 
-        writeln!(f, ";")?;
-
         Ok(())
     }
 }
@@ -49,8 +47,6 @@ impl<'a> Var<'a> {
         } else {
             None
         };
-
-        lexer.eat_token(Token::Semi)?;
 
         Ok(Self { ident, ty, arr })
     }

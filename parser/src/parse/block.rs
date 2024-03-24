@@ -30,6 +30,7 @@ impl<'a> DaedalusDisplay for Block<'a> {
             match item {
                 BlockItem::Var(var) => {
                     var.fmt(f)?;
+                    writeln!(f, ";")?;
                 }
                 BlockItem::If(i) => {
                     i.fmt(f)?;
@@ -76,6 +77,7 @@ impl<'a> Block<'a> {
                 }
                 Token::Var => {
                     items.push(BlockItem::Var(Var::parse(lexer)?));
+                    lexer.eat_token(Token::Semi)?;
                     continue;
                 }
                 Token::If => {

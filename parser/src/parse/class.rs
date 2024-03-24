@@ -20,6 +20,7 @@ impl<'a> DaedalusDisplay for Class<'a> {
         f.push_indent();
         for var in self.fields.iter() {
             var.fmt(f)?;
+            writeln!(f, ";")?;
         }
         f.pop_indent();
 
@@ -45,6 +46,7 @@ impl<'a> Class<'a> {
             }
 
             fields.push(Var::parse(lexer)?);
+            lexer.eat_token(Token::Semi)?;
         }
 
         lexer.eat_token(Token::CloseBrace)?;

@@ -5,12 +5,13 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
-use super::Block;
+use super::{Block, Var};
 
 #[derive(Debug)]
 pub struct FunctionDefinition<'a> {
     pub ident: &'a str,
     pub ty: &'a str,
+    pub args: Vec<Var<'a>>,
     pub block: Block<'a>,
 }
 
@@ -32,11 +33,31 @@ impl<'a> FunctionDefinition<'a> {
         let ident = lexer.eat_token(Token::Ident)?;
 
         lexer.eat_token(Token::OpenParen)?;
+
+        let mut args = Vec::new();
+        loop {
+            if lexer.peek()? == Token::CloseParen {
+                break;
+            }
+            args.push(Var::parse(lexer)?);
+
+            if lexer.peek()? == Token::Comma {
+                lexer.eat_token(Token::Comma)?;
+            } else {
+                break;
+            }
+        }
+
         lexer.eat_token(Token::CloseParen)?;
 
         let block = Block::parse(lexer)?;
         lexer.eat_token(Token::Semi)?;
 
-        Ok(Self { ident, ty, block })
+        Ok(Self {
+            ident,
+            ty,
+            args,
+            block,
+        })
     }
 }

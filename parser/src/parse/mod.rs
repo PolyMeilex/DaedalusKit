@@ -60,6 +60,7 @@ impl<'a> File<'a> {
                 }
                 Token::Var => {
                     items.push(Item::Var(Var::parse(lexer)?));
+                    lexer.eat_token(Token::Semi)?;
                 }
                 Token::Func => {
                     items.push(Item::Func(FunctionDefinition::parse(lexer)?));
