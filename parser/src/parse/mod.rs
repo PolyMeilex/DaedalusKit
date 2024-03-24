@@ -30,6 +30,9 @@ pub use class::Class;
 mod expr;
 pub use expr::Expr;
 
+mod ty;
+pub use ty::Ty;
+
 use crate::ParseError;
 
 pub enum Item<'a> {
