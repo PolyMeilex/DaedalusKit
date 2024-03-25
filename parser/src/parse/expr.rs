@@ -265,6 +265,7 @@ impl<'a> Expr<'a> {
                 ExprKind::Paren(Box::new(expr))
             }
             got => {
+                peek_lexer.eat_any()?;
                 return Err(ParseError::unexpeced_token(got, peek_lexer.span()));
             }
         };
