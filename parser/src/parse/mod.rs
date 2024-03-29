@@ -6,6 +6,9 @@ pub use instance::Instance;
 mod var;
 pub use var::Var;
 
+mod const_def;
+pub use const_def::Const;
+
 mod func;
 pub use func::FunctionDefinition;
 
@@ -39,6 +42,7 @@ pub enum Item<'a> {
     Class(Class<'a>),
     Instance(Instance<'a>),
     Var(Var<'a>),
+    Const(Const<'a>),
     Func(FunctionDefinition<'a>),
 }
 
@@ -57,6 +61,10 @@ impl<'a> File<'a> {
                 }
                 Token::Instance => {
                     items.push(Item::Instance(Instance::parse(lexer)?));
+                }
+                Token::Const => {
+                    items.push(Item::Const(Const::parse(lexer)?));
+                    lexer.eat_token(Token::Semi)?;
                 }
                 Token::Var => {
                     items.push(Item::Var(Var::parse(lexer)?));

@@ -47,6 +47,9 @@ fn main() {
             Item::Func(v) => {
                 formatter.format(v).unwrap();
             }
+            Item::Const(v) => {
+                formatter.format(v).unwrap();
+            }
         }
     }
 }
