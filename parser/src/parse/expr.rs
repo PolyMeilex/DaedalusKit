@@ -10,32 +10,34 @@ use super::FunctionCall;
 
 #[derive(Debug)]
 pub enum AssocOp {
-    // `+`
+    /// `+`
     Add,
-    // `-`
+    /// `-`
     Subtract,
-    // `==`
+    /// `==`
     Equal,
-    // `!=`
+    /// `!=`
     NotEqual,
-    // `<`
+    /// `<`
     Less,
-    // `<=`
+    /// `<=`
     LessEqual,
-    // `>`
+    /// `>`
     Greater,
-    // `>=`
+    /// `>=`
     GreaterEqual,
-    // `&&`
+    /// `&&`
     And,
-    // `&`
+    /// `&`
     BitAnd,
-    // `||`
+    /// `||`
     Or,
-    // `|`
+    /// `|`
     BitOr,
-    // `!`
+    /// `!`
     Not,
+    /// '*'
+    Multiply,
 }
 
 impl AssocOp {
@@ -54,6 +56,7 @@ impl AssocOp {
             Self::Or => "||",
             Self::BitOr => "|",
             Self::Not => "!",
+            Self::Multiply => "*",
         }
     }
 
@@ -107,11 +110,23 @@ impl AssocOp {
                 lexer.eat_token(Token::BitOr)?;
                 Self::BitOr
             }
+            Token::Star => {
+                lexer.eat_token(Token::Star)?;
+                Self::Multiply
+            }
             _ => return Ok(None),
         };
 
         Ok(Some(res))
     }
+}
+
+#[derive(Debug)]
+pub enum UnaryOp {
+    /// '!'
+    Not,
+    /// '-'
+    Negative,
 }
 
 #[derive(Debug)]
@@ -122,8 +137,8 @@ pub struct Lit<'a> {
 #[derive(Debug)]
 pub enum ExprKind<'a> {
     Binary(AssocOp, Box<Expr<'a>>, Box<Expr<'a>>),
-    // For not only `!` unary op
-    Unary(Box<Expr<'a>>),
+    // For not only `!`/`-` unary op
+    Unary(UnaryOp, Box<Expr<'a>>),
 
     Lit(Lit<'a>),
     Call(FunctionCall<'a>),
@@ -149,8 +164,11 @@ impl<'a> DaedalusDisplay for Expr<'a> {
                 write!(f, " {} ", op.as_str())?;
                 right.fmt(f)?;
             }
-            ExprKind::Unary(v) => {
-                write!(f, "!")?;
+            ExprKind::Unary(op, v) => {
+                match op {
+                    UnaryOp::Not => write!(f, "!")?,
+                    UnaryOp::Negative => write!(f, "-")?,
+                }
                 v.fmt(f)?;
             }
             ExprKind::Lit(lit) => {
@@ -212,7 +230,12 @@ impl<'a> Expr<'a> {
             Token::Bang => {
                 lexer.eat_token(Token::Bang)?;
                 let expr = Self::parse_without_op(lexer)?;
-                ExprKind::Unary(Box::new(expr))
+                ExprKind::Unary(UnaryOp::Not, Box::new(expr))
+            }
+            Token::Minus => {
+                lexer.eat_token(Token::Minus)?;
+                let expr = Self::parse_without_op(lexer)?;
+                ExprKind::Unary(UnaryOp::Negative, Box::new(expr))
             }
             Token::String => {
                 let raw = lexer.eat_token(Token::String)?;
@@ -238,6 +261,15 @@ impl<'a> Expr<'a> {
                         let ident = lexer.eat_token(Token::Ident)?;
                         ExprKind::Ident(ident)
                     }
+                };
+
+                let expr = if lexer.peek()? == Token::OpenBracket {
+                    lexer.eat_token(Token::OpenBracket)?;
+                    let index = Expr::parse(lexer)?;
+                    lexer.eat_token(Token::CloseBracket)?;
+                    ExprKind::Index(Box::new(Expr { kind: expr }), Box::new(index))
+                } else {
+                    expr
                 };
 
                 match peek_lexer.peek()? {
