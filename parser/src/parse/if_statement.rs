@@ -71,7 +71,7 @@ impl<'a> IfStatement<'a> {
         if lexer.peek()? == Token::Else {
             let stmt = IfStatement::parse(lexer)?;
             next = Some(Box::new(stmt));
-        } else {
+        } else if lexer.peek()? == Token::Semi {
             lexer.eat_token(Token::Semi)?;
         }
 
