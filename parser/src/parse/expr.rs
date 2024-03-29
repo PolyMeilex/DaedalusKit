@@ -38,6 +38,8 @@ pub enum AssocOp {
     Not,
     /// '*'
     Multiply,
+    /// '/'
+    Divide,
     /// `<<`
     ShiftLeft,
     /// `>>`
@@ -61,6 +63,7 @@ impl AssocOp {
             Self::BitOr => "|",
             Self::Not => "!",
             Self::Multiply => "*",
+            Self::Divide => "/",
             Self::ShiftLeft => "<<",
             Self::ShiftRight => ">>",
         }
@@ -119,6 +122,10 @@ impl AssocOp {
             Token::Star => {
                 lexer.eat_token(Token::Star)?;
                 Self::Multiply
+            }
+            Token::Slash => {
+                lexer.eat_token(Token::Slash)?;
+                Self::Divide
             }
             Token::ShiftLeft => {
                 lexer.eat_token(Token::ShiftLeft)?;
