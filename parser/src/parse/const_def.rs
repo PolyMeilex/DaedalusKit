@@ -12,6 +12,7 @@ pub struct Const<'a> {
     pub ident: &'a str,
     pub ty: Ty<'a>,
     pub arr: Option<Expr<'a>>,
+    pub expr: Option<Expr<'a>>,
 }
 
 impl<'a> DaedalusDisplay for Const<'a> {
@@ -26,6 +27,11 @@ impl<'a> DaedalusDisplay for Const<'a> {
             write!(f, "[")?;
             arr.fmt(f)?;
             write!(f, "]")?;
+        }
+
+        if let Some(expr) = self.expr.as_ref() {
+            write!(f, " = ")?;
+            expr.fmt(f)?;
         }
 
         Ok(())
@@ -48,6 +54,18 @@ impl<'a> Const<'a> {
             None
         };
 
-        Ok(Self { ident, ty, arr })
+        let expr = if lexer.peek()? == Token::Eq {
+            lexer.eat_token(Token::Eq)?;
+            Some(Expr::parse(lexer)?)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            ident,
+            ty,
+            arr,
+            expr,
+        })
     }
 }
