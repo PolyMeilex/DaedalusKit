@@ -59,7 +59,7 @@ impl<'a> IfStatement<'a> {
 
         let condition = if has_if {
             lexer.eat_token(Token::If)?;
-            Some(Self::parse_paren(lexer)?)
+            Some(Expr::parse(lexer)?)
         } else {
             None
         };
@@ -82,12 +82,5 @@ impl<'a> IfStatement<'a> {
             condition,
             next,
         })
-    }
-
-    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<Expr<'a>, ParseError> {
-        lexer.eat_token(Token::OpenParen)?;
-        let expr = Expr::parse(lexer)?;
-        lexer.eat_token(Token::CloseParen)?;
-        Ok(expr)
     }
 }
