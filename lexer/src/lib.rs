@@ -156,6 +156,10 @@ pub enum Token {
     Star,
     #[token("/")]
     Slash,
+    #[token("<<")]
+    ShiftLeft,
+    #[token(">>")]
+    ShiftRight,
 }
 
 impl std::fmt::Display for Token {
@@ -203,6 +207,8 @@ impl std::fmt::Display for Token {
             Token::Bang => "'!'",
             Token::Star => "'*'",
             Token::Slash => "/",
+            Token::ShiftLeft => "<<",
+            Token::ShiftRight => ">>",
         };
         write!(f, "{str}")
     }
