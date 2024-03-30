@@ -20,15 +20,15 @@ impl DaedalusDisplay for IfStatement {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         if let Some(condition) = self.condition.as_ref() {
             if self.has_else {
-                write!(f, " else if(")?;
+                write!(f, " else if ")?;
             } else {
                 f.write_indent()?;
-                write!(f, "if(")?;
+                write!(f, "if ")?;
             }
 
             condition.fmt(f)?;
 
-            write!(f, ") ")?;
+            write!(f, " ")?;
         } else if self.has_else {
             write!(f, " else ")?;
         }
