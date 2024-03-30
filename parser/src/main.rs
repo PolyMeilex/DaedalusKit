@@ -1,12 +1,7 @@
-#![allow(clippy::single_match)]
-
 use std::{path::Path, process::exit};
 
-use fmt::DaedalusFormatter;
 use lexer::DaedalusLexer;
-
-mod fmt;
-pub mod parse;
+use parser::fmt;
 
 pub type ParseError = lexer::TokenError;
 
@@ -35,9 +30,9 @@ fn parse(path: &Path, bytes: &[u8]) {
     let mut lexer = DaedalusLexer::new(&src);
 
     let emit_error = |err: &ParseError| emit_error(path, &src, err);
-    let mut formatter = DaedalusFormatter::new(fmt::IoFmt(std::io::stdout()));
+    let mut formatter = fmt::DaedalusFormatter::new(fmt::IoFmt(std::io::stdout()));
 
-    let file = match parse::File::parse(&mut lexer) {
+    let file = match parser::parse::File::parse(&mut lexer) {
         Ok(file) => file,
         Err(err) => {
             emit_error(&err);
@@ -66,32 +61,6 @@ fn emit_error(path: &Path, src: &str, err: &ParseError) {
             Label::secondary(file_id, err.span().clone()).with_message(err.backtrace().to_string()),
         );
     }
-
-    // match &err.kind {
-    //     TokenErrorKind::ExpectedToken {
-    //         expected: Token::Semi,
-    //         ..
-    //     } => {
-    //         let mut secondary = err.span().clone();
-    //
-    //         let slice = src.get(0..secondary.start).unwrap();
-    //
-    //         let mut offset = secondary.start;
-    //         for (id, ch) in slice.char_indices().rev() {
-    //             if !ch.is_whitespace() {
-    //                 offset = id + 1;
-    //                 break;
-    //             }
-    //         }
-    //
-    //         secondary.start = offset;
-    //         secondary.end = offset;
-    //
-    //         labels
-    //             .push(Label::secondary(file_id, secondary).with_message("Try to insert ',' here"));
-    //     }
-    //     _ => {}
-    // }
 
     let diagnostic = Diagnostic::error()
         .with_message(err.to_string())
