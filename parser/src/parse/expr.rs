@@ -44,6 +44,16 @@ pub enum AssocOp {
     ShiftLeft,
     /// `>>`
     ShiftRight,
+    /// `=`
+    Assign,
+    /// `+=`
+    AddAssign,
+    /// `-=`
+    SubtractAssign,
+    /// `*=`
+    MultiplyAssign,
+    /// `/=`
+    DivideAssign,
 }
 
 impl AssocOp {
@@ -66,6 +76,11 @@ impl AssocOp {
             Self::Divide => "/",
             Self::ShiftLeft => "<<",
             Self::ShiftRight => ">>",
+            Self::Assign => "=",
+            Self::AddAssign => "+=",
+            Self::SubtractAssign => "-=",
+            Self::MultiplyAssign => "*=",
+            Self::DivideAssign => "/=",
         }
     }
 
@@ -135,6 +150,26 @@ impl AssocOp {
                 lexer.eat_token(Token::ShiftRight)?;
                 Self::ShiftRight
             }
+            Token::Eq => {
+                lexer.eat_token(Token::Eq)?;
+                Self::Assign
+            }
+            Token::PlusEq => {
+                lexer.eat_token(Token::PlusEq)?;
+                Self::AddAssign
+            }
+            Token::MinusEq => {
+                lexer.eat_token(Token::MinusEq)?;
+                Self::SubtractAssign
+            }
+            Token::StarEq => {
+                lexer.eat_token(Token::StarEq)?;
+                Self::MultiplyAssign
+            }
+            Token::SlashEq => {
+                lexer.eat_token(Token::SlashEq)?;
+                Self::DivideAssign
+            }
             _ => return Ok(None),
         };
 
@@ -177,9 +212,6 @@ pub enum ExprKind<'a> {
     Field(Box<Expr<'a>>, &'a str),
     /// a[b]
     Index(Box<Expr<'a>>, Box<Expr<'a>>),
-
-    /// eg. `a = b`
-    Assign(Box<Expr<'a>>, Box<Expr<'a>>),
 }
 
 #[derive(Debug)]
@@ -237,11 +269,6 @@ impl<'a> DaedalusDisplay for Expr<'a> {
                 write!(f, "[")?;
                 b.fmt(f)?;
                 write!(f, "]")?;
-            }
-            ExprKind::Assign(a, b) => {
-                a.fmt(f)?;
-                write!(f, " = ")?;
-                b.fmt(f)?;
             }
         }
         Ok(())
@@ -345,16 +372,6 @@ impl<'a> Expr<'a> {
                 peek_lexer.eat_any()?;
                 return Err(ParseError::unexpeced_token(got, peek_lexer.span()));
             }
-        };
-
-        let expr = if lexer.peek()? == Token::Eq {
-            lexer.eat_token(Token::Eq)?;
-            let right = Expr::parse(lexer)?;
-            Expr {
-                kind: ExprKind::Assign(Box::new(expr), Box::new(right)),
-            }
-        } else {
-            expr
         };
 
         Ok(expr)
