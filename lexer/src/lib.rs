@@ -126,6 +126,14 @@ pub enum Token {
     EqEq,
     #[token("!=")]
     NotEq,
+    #[token("+=")]
+    PlusEq,
+    #[token("-=")]
+    MinusEq,
+    #[token("*=")]
+    StarEq,
+    #[token("/=")]
+    SlashEq,
     #[token(",")]
     Comma,
     #[token("&&")]
@@ -192,6 +200,10 @@ impl std::fmt::Display for Token {
             Token::Eq => "'='",
             Token::EqEq => "'=='",
             Token::NotEq => "'!='",
+            Token::PlusEq => "'+='",
+            Token::MinusEq => "'-='",
+            Token::StarEq => "'*='",
+            Token::SlashEq => "'/='",
             Token::Comma => "','",
             Token::And => "'&&'",
             Token::BitAnd => "'&'",
@@ -206,9 +218,9 @@ impl std::fmt::Display for Token {
             Token::Dot => "'.'",
             Token::Bang => "'!'",
             Token::Star => "'*'",
-            Token::Slash => "/",
-            Token::ShiftLeft => "<<",
-            Token::ShiftRight => ">>",
+            Token::Slash => "'/'",
+            Token::ShiftLeft => "'<<'",
+            Token::ShiftRight => "'>>'",
         };
         write!(f, "{str}")
     }
