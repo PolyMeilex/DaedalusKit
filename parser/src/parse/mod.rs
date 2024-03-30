@@ -3,6 +3,9 @@ use lexer::{DaedalusLexer, Token};
 mod instance;
 pub use instance::Instance;
 
+mod prototype;
+pub use prototype::Prototype;
+
 mod var;
 pub use var::Var;
 
@@ -47,6 +50,7 @@ use std::fmt::Write;
 pub enum Item {
     Class(Class),
     Instance(Instance),
+    Prototype(Prototype),
     Var(Var),
     Const(Const),
     Func(FunctionDefinition),
@@ -64,6 +68,9 @@ impl DaedalusDisplay for File {
                     v.fmt(f)?;
                 }
                 Item::Instance(v) => {
+                    v.fmt(f)?;
+                }
+                Item::Prototype(v) => {
                     v.fmt(f)?;
                 }
                 Item::Var(v) => {
@@ -96,6 +103,9 @@ impl File {
                 Token::Instance => {
                     items.push(Item::Instance(Instance::parse(lexer)?));
                 }
+                Token::Prototype => {
+                    items.push(Item::Prototype(Prototype::parse(lexer)?));
+                }
                 Token::Const => {
                     items.push(Item::Const(Const::parse(lexer)?));
                     lexer.eat_token(Token::Semi)?;
@@ -107,8 +117,9 @@ impl File {
                 Token::Func => {
                     items.push(Item::Func(FunctionDefinition::parse(lexer)?));
                 }
-                _ => {
-                    lexer.eat_any().unwrap();
+                got => {
+                    lexer.eat_any()?;
+                    return Err(ParseError::unexpeced_token(got, lexer.span()));
                 }
             }
         }
