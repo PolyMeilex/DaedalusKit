@@ -8,24 +8,24 @@ use std::fmt::Write;
 use super::{Expr, Ident, Ty};
 
 #[derive(Debug)]
-pub enum ConstKind<'a> {
+pub enum ConstKind {
     Value {
-        init: Option<Expr<'a>>,
+        init: Option<Expr>,
     },
     Array {
-        size_init: Expr<'a>,
-        init: Option<Vec<Expr<'a>>>,
+        size_init: Expr,
+        init: Option<Vec<Expr>>,
     },
 }
 
 #[derive(Debug)]
-pub struct Const<'a> {
-    pub ident: Ident<'a>,
-    pub ty: Ty<'a>,
-    pub kind: ConstKind<'a>,
+pub struct Const {
+    pub ident: Ident,
+    pub ty: Ty,
+    pub kind: ConstKind,
 }
 
-impl<'a> DaedalusDisplay for Const<'a> {
+impl DaedalusDisplay for Const {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         f.write_indent()?;
 
@@ -60,8 +60,8 @@ impl<'a> DaedalusDisplay for Const<'a> {
     }
 }
 
-impl<'a> Const<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl Const {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Const)?;
 
         let ty = Ty::parse(lexer)?;

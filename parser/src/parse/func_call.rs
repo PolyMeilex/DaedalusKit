@@ -8,12 +8,12 @@ use std::fmt::Write;
 use super::{Expr, Ident};
 
 #[derive(Debug)]
-pub struct FunctionCall<'a> {
-    pub ident: Ident<'a>,
-    pub args: Vec<Expr<'a>>,
+pub struct FunctionCall {
+    pub ident: Ident,
+    pub args: Vec<Expr>,
 }
 
-impl<'a> DaedalusDisplay for FunctionCall<'a> {
+impl DaedalusDisplay for FunctionCall {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         self.ident.fmt(f)?;
         write!(f, "(")?;
@@ -29,8 +29,8 @@ impl<'a> DaedalusDisplay for FunctionCall<'a> {
     }
 }
 
-impl<'a> FunctionCall<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl FunctionCall {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         let ident = Ident::parse(lexer)?;
 
         let args = Self::parse_paren(lexer)?;
@@ -38,7 +38,7 @@ impl<'a> FunctionCall<'a> {
         Ok(Self { ident, args })
     }
 
-    fn parse_paren(lexer: &mut DaedalusLexer<'a>) -> Result<Vec<Expr<'a>>, ParseError> {
+    fn parse_paren(lexer: &mut DaedalusLexer) -> Result<Vec<Expr>, ParseError> {
         let mut out = Vec::new();
 
         lexer.eat_token(Token::OpenParen)?;

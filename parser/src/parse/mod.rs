@@ -44,19 +44,19 @@ use crate::{
 use std::fmt::Write;
 
 #[derive(Debug)]
-pub enum Item<'a> {
-    Class(Class<'a>),
-    Instance(Instance<'a>),
-    Var(Var<'a>),
-    Const(Const<'a>),
-    Func(FunctionDefinition<'a>),
+pub enum Item {
+    Class(Class),
+    Instance(Instance),
+    Var(Var),
+    Const(Const),
+    Func(FunctionDefinition),
 }
 
-pub struct File<'a> {
-    pub items: Vec<Item<'a>>,
+pub struct File {
+    pub items: Vec<Item>,
 }
 
-impl<'a> DaedalusDisplay for File<'a> {
+impl DaedalusDisplay for File {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         for item in &self.items {
             match item {
@@ -84,8 +84,8 @@ impl<'a> DaedalusDisplay for File<'a> {
     }
 }
 
-impl<'a> File<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl File {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         let mut items = Vec::new();
 
         while let Ok(token) = lexer.peek() {

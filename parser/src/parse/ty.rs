@@ -7,27 +7,31 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Ty<'a> {
-    pub raw: &'a str,
+pub struct Ty {
+    pub raw: String,
 }
 
-impl<'a> DaedalusDisplay for Ty<'a> {
+impl DaedalusDisplay for Ty {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         write!(f, "{}", self.raw)?;
         Ok(())
     }
 }
 
-impl<'a> Ty<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl Ty {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         match lexer.peek()? {
             Token::Ident => {
                 let raw = lexer.eat_token(Token::Ident)?;
-                Ok(Self { raw })
+                Ok(Self {
+                    raw: raw.to_string(),
+                })
             }
             Token::Func => {
                 let raw = lexer.eat_token(Token::Func)?;
-                Ok(Self { raw })
+                Ok(Self {
+                    raw: raw.to_string(),
+                })
             }
             got => {
                 lexer.eat_any()?;

@@ -8,24 +8,24 @@ use std::fmt::Write;
 use super::{Expr, Ident, Ty};
 
 #[derive(Debug)]
-pub enum VarKind<'a> {
+pub enum VarKind {
     Value {
-        init: Option<Expr<'a>>,
+        init: Option<Expr>,
     },
     Array {
-        size_init: Expr<'a>,
-        init: Option<Vec<Expr<'a>>>,
+        size_init: Expr,
+        init: Option<Vec<Expr>>,
     },
 }
 
 #[derive(Debug)]
-pub struct Var<'a> {
-    pub ident: Ident<'a>,
-    pub ty: Ty<'a>,
-    pub kind: VarKind<'a>,
+pub struct Var {
+    pub ident: Ident,
+    pub ty: Ty,
+    pub kind: VarKind,
 }
 
-impl<'a> DaedalusDisplay for Var<'a> {
+impl DaedalusDisplay for Var {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         f.write_indent()?;
 
@@ -60,8 +60,8 @@ impl<'a> DaedalusDisplay for Var<'a> {
     }
 }
 
-impl<'a> Var<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl Var {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Var)?;
 
         let ty = Ty::parse(lexer)?;

@@ -8,12 +8,12 @@ use std::fmt::Write;
 use super::{Ident, Var};
 
 #[derive(Debug)]
-pub struct Class<'a> {
-    pub ident: Ident<'a>,
-    pub fields: Vec<Var<'a>>,
+pub struct Class {
+    pub ident: Ident,
+    pub fields: Vec<Var>,
 }
 
-impl<'a> DaedalusDisplay for Class<'a> {
+impl DaedalusDisplay for Class {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         writeln!(f, "class ")?;
         self.ident.fmt(f)?;
@@ -33,8 +33,8 @@ impl<'a> DaedalusDisplay for Class<'a> {
     }
 }
 
-impl<'a> Class<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl Class {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Class)?;
 
         let ident = Ident::parse(lexer)?;

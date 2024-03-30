@@ -7,20 +7,22 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Ident<'a> {
-    pub raw: &'a str,
+pub struct Ident {
+    pub raw: String,
 }
 
-impl<'a> DaedalusDisplay for Ident<'a> {
+impl DaedalusDisplay for Ident {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         write!(f, "{}", self.raw)?;
         Ok(())
     }
 }
 
-impl<'a> Ident<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl Ident {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         let raw = lexer.eat_token(Token::Ident)?;
-        Ok(Self { raw })
+        Ok(Self {
+            raw: raw.to_string(),
+        })
     }
 }

@@ -8,13 +8,13 @@ use std::fmt::Write;
 use super::{Block, Ident};
 
 #[derive(Debug)]
-pub struct Instance<'a> {
-    pub ident: Ident<'a>,
-    pub parent: Ident<'a>,
-    pub block: Block<'a>,
+pub struct Instance {
+    pub ident: Ident,
+    pub parent: Ident,
+    pub block: Block,
 }
 
-impl<'a> DaedalusDisplay for Instance<'a> {
+impl DaedalusDisplay for Instance {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         write!(f, "instance ")?;
         self.ident.fmt(f)?;
@@ -29,8 +29,8 @@ impl<'a> DaedalusDisplay for Instance<'a> {
     }
 }
 
-impl<'a> Instance<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl Instance {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Instance)?;
 
         let ident = Ident::parse(lexer)?;

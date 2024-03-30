@@ -8,14 +8,14 @@ use std::fmt::Write;
 use super::{Block, Ident, Ty, Var};
 
 #[derive(Debug)]
-pub struct FunctionDefinition<'a> {
-    pub ident: Ident<'a>,
-    pub ty: Ty<'a>,
-    pub args: Vec<Var<'a>>,
-    pub block: Block<'a>,
+pub struct FunctionDefinition {
+    pub ident: Ident,
+    pub ty: Ty,
+    pub args: Vec<Var>,
+    pub block: Block,
 }
 
-impl<'a> DaedalusDisplay for FunctionDefinition<'a> {
+impl DaedalusDisplay for FunctionDefinition {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         write!(f, "func ")?;
         self.ty.fmt(f)?;
@@ -39,8 +39,8 @@ impl<'a> DaedalusDisplay for FunctionDefinition<'a> {
     }
 }
 
-impl<'a> FunctionDefinition<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl FunctionDefinition {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Func)?;
 
         let ty = Ty::parse(lexer)?;

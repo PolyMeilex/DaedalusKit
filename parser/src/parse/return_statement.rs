@@ -8,11 +8,11 @@ use std::fmt::Write;
 use super::Expr;
 
 #[derive(Debug)]
-pub struct ReturnStatement<'a> {
-    pub expr: Option<Expr<'a>>,
+pub struct ReturnStatement {
+    pub expr: Option<Expr>,
 }
 
-impl<'a> DaedalusDisplay for ReturnStatement<'a> {
+impl DaedalusDisplay for ReturnStatement {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         f.write_indent()?;
         write!(f, "return")?;
@@ -25,8 +25,8 @@ impl<'a> DaedalusDisplay for ReturnStatement<'a> {
     }
 }
 
-impl<'a> ReturnStatement<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl ReturnStatement {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Return)?;
 
         let expr = if lexer.peek()? != Token::Semi {

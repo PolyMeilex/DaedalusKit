@@ -8,15 +8,15 @@ use std::fmt::Write;
 use super::{Block, Expr};
 
 #[derive(Debug)]
-pub struct IfStatement<'a> {
+pub struct IfStatement {
     pub has_else: bool,
     pub has_if: bool,
-    pub block: Block<'a>,
-    pub condition: Option<Expr<'a>>,
-    pub next: Option<Box<IfStatement<'a>>>,
+    pub block: Block,
+    pub condition: Option<Expr>,
+    pub next: Option<Box<IfStatement>>,
 }
 
-impl<'a> DaedalusDisplay for IfStatement<'a> {
+impl DaedalusDisplay for IfStatement {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         if let Some(condition) = self.condition.as_ref() {
             if self.has_else {
@@ -45,8 +45,8 @@ impl<'a> DaedalusDisplay for IfStatement<'a> {
     }
 }
 
-impl<'a> IfStatement<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl IfStatement {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         let (has_else, has_if) = if lexer.peek()? == Token::Else {
             lexer.eat_token(Token::Else)?;
 

@@ -8,19 +8,19 @@ use std::fmt::Write;
 use super::{Expr, IfStatement, ReturnStatement, Var};
 
 #[derive(Debug)]
-pub enum BlockItem<'a> {
-    Var(Var<'a>),
-    If(IfStatement<'a>),
-    Return(ReturnStatement<'a>),
-    Expr(Expr<'a>),
+pub enum BlockItem {
+    Var(Var),
+    If(IfStatement),
+    Return(ReturnStatement),
+    Expr(Expr),
 }
 
 #[derive(Debug)]
-pub struct Block<'a> {
-    pub items: Vec<BlockItem<'a>>,
+pub struct Block {
+    pub items: Vec<BlockItem>,
 }
 
-impl<'a> DaedalusDisplay for Block<'a> {
+impl DaedalusDisplay for Block {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         if self.items.is_empty() {
             return write!(f, "{{}}");
@@ -57,8 +57,8 @@ impl<'a> DaedalusDisplay for Block<'a> {
     }
 }
 
-impl<'a> Block<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl Block {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::OpenBrace)?;
 
         let mut items = Vec::new();

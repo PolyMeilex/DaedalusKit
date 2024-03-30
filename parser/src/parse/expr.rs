@@ -186,40 +186,40 @@ pub enum UnaryOp {
 }
 
 #[derive(Debug)]
-pub enum LitKind<'a> {
-    Intager(&'a str),
-    Float(&'a str),
-    String(&'a str),
+pub enum LitKind {
+    Intager(String),
+    Float(String),
+    String(String),
 }
 
 #[derive(Debug)]
-pub struct Lit<'a> {
-    kind: LitKind<'a>,
+pub struct Lit {
+    kind: LitKind,
 }
 
 #[derive(Debug)]
-pub enum ExprKind<'a> {
-    Binary(AssocOp, Box<Expr<'a>>, Box<Expr<'a>>),
+pub enum ExprKind {
+    Binary(AssocOp, Box<Expr>, Box<Expr>),
     /// For not only `!`/`-` unary op
-    Unary(UnaryOp, Box<Expr<'a>>),
+    Unary(UnaryOp, Box<Expr>),
 
-    Lit(Lit<'a>),
-    Call(FunctionCall<'a>),
-    Ident(Ident<'a>),
+    Lit(Lit),
+    Call(FunctionCall),
+    Ident(Ident),
     /// (a)
-    Paren(Box<Expr<'a>>),
+    Paren(Box<Expr>),
     /// a.b
-    Field(Box<Expr<'a>>, Ident<'a>),
+    Field(Box<Expr>, Ident),
     /// a[b]
-    Index(Box<Expr<'a>>, Box<Expr<'a>>),
+    Index(Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug)]
-pub struct Expr<'a> {
-    pub kind: ExprKind<'a>,
+pub struct Expr {
+    pub kind: ExprKind,
 }
 
-impl<'a> DaedalusDisplay for Expr<'a> {
+impl DaedalusDisplay for Expr {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         match &self.kind {
             ExprKind::Binary(op, left, right) => {
@@ -276,8 +276,8 @@ impl<'a> DaedalusDisplay for Expr<'a> {
     }
 }
 
-impl<'a> Expr<'a> {
-    pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+impl Expr {
+    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_whitespace();
 
         let left = Self::parse_without_op(lexer)?;
@@ -286,7 +286,7 @@ impl<'a> Expr<'a> {
         Ok(expr)
     }
 
-    fn parse_with_op(lexer: &mut DaedalusLexer<'a>, left: Self) -> Result<Self, ParseError> {
+    fn parse_with_op(lexer: &mut DaedalusLexer, left: Self) -> Result<Self, ParseError> {
         if let Some(op) = AssocOp::parse_op(lexer)? {
             let right = Self::parse_without_op(lexer)?;
 
@@ -300,7 +300,7 @@ impl<'a> Expr<'a> {
         }
     }
 
-    fn parse_without_op(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
+    fn parse_without_op(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         let mut peek_lexer = lexer.clone();
         let expr = match peek_lexer.peek()? {
             Token::Bang => {
@@ -321,7 +321,7 @@ impl<'a> Expr<'a> {
                 let raw = lexer.eat_token(Token::String)?;
                 Expr {
                     kind: ExprKind::Lit(Lit {
-                        kind: LitKind::String(raw),
+                        kind: LitKind::String(raw.to_string()),
                     }),
                 }
             }
@@ -329,7 +329,7 @@ impl<'a> Expr<'a> {
                 let raw = lexer.eat_token(Token::Integer)?;
                 Expr {
                     kind: ExprKind::Lit(Lit {
-                        kind: LitKind::Intager(raw),
+                        kind: LitKind::Intager(raw.to_string()),
                     }),
                 }
             }
@@ -337,7 +337,7 @@ impl<'a> Expr<'a> {
                 let raw = lexer.eat_token(Token::Float)?;
                 Expr {
                     kind: ExprKind::Lit(Lit {
-                        kind: LitKind::Float(raw),
+                        kind: LitKind::Float(raw.to_string()),
                     }),
                 }
             }
@@ -379,7 +379,7 @@ impl<'a> Expr<'a> {
     }
 
     pub fn parse_reference(
-        lexer: &mut DaedalusLexer<'a>,
+        lexer: &mut DaedalusLexer,
         parent_expr: Self,
     ) -> Result<Self, ParseError> {
         let expr = if lexer.peek()? == Token::OpenBracket {
@@ -397,7 +397,7 @@ impl<'a> Expr<'a> {
     }
 
     pub fn parse_array_index(
-        lexer: &mut DaedalusLexer<'a>,
+        lexer: &mut DaedalusLexer,
         parent_expr: Self,
     ) -> Result<Self, ParseError> {
         lexer.eat_token(Token::OpenBracket)?;
@@ -410,7 +410,7 @@ impl<'a> Expr<'a> {
     }
 
     pub fn parse_field_access(
-        lexer: &mut DaedalusLexer<'a>,
+        lexer: &mut DaedalusLexer,
         parent_expr: Self,
     ) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Dot)?;
