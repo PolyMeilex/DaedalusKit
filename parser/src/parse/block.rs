@@ -92,7 +92,10 @@ impl Block {
                     items.push(BlockItem::Expr(Expr::parse(lexer)?));
                     lexer.eat_token(Token::Semi)?;
                 }
-                _ => {}
+                got => {
+                    lexer.eat_any()?;
+                    return Err(ParseError::unexpeced_token(got, lexer.span()));
+                }
             }
         }
 
