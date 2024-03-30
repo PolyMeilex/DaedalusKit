@@ -33,6 +33,9 @@ pub use expr::Expr;
 mod ty;
 pub use ty::Ty;
 
+mod ident;
+pub use ident::Ident;
+
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
     ParseError,

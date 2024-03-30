@@ -5,11 +5,11 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
-use super::{Block, Ty, Var};
+use super::{Block, Ident, Ty, Var};
 
 #[derive(Debug)]
 pub struct FunctionDefinition<'a> {
-    pub ident: &'a str,
+    pub ident: Ident<'a>,
     pub ty: Ty<'a>,
     pub args: Vec<Var<'a>>,
     pub block: Block<'a>,
@@ -19,7 +19,9 @@ impl<'a> DaedalusDisplay for FunctionDefinition<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
         write!(f, "func ")?;
         self.ty.fmt(f)?;
-        write!(f, " {}(", self.ident)?;
+        write!(f, " ")?;
+        self.ident.fmt(f)?;
+        write!(f, "(")?;
 
         let mut iter = self.args.iter().peekable();
         while let Some(arg) = iter.next() {
@@ -42,7 +44,7 @@ impl<'a> FunctionDefinition<'a> {
         lexer.eat_token(Token::Func)?;
 
         let ty = Ty::parse(lexer)?;
-        let ident = lexer.eat_token(Token::Ident)?;
+        let ident = Ident::parse(lexer)?;
 
         lexer.eat_token(Token::OpenParen)?;
 

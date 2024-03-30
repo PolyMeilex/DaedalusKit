@@ -6,7 +6,7 @@ use crate::{
     ParseError,
 };
 
-use super::FunctionCall;
+use super::{FunctionCall, Ident};
 
 #[derive(Debug)]
 pub enum AssocOp {
@@ -205,11 +205,11 @@ pub enum ExprKind<'a> {
 
     Lit(Lit<'a>),
     Call(FunctionCall<'a>),
-    Ident(&'a str),
+    Ident(Ident<'a>),
     /// (a)
     Paren(Box<Expr<'a>>),
     /// a.b
-    Field(Box<Expr<'a>>, &'a str),
+    Field(Box<Expr<'a>>, Ident<'a>),
     /// a[b]
     Index(Box<Expr<'a>>, Box<Expr<'a>>),
 }
@@ -253,7 +253,7 @@ impl<'a> DaedalusDisplay for Expr<'a> {
                 call.fmt(f)?;
             }
             ExprKind::Ident(i) => {
-                write!(f, "{i}")?;
+                i.fmt(f)?;
             }
             ExprKind::Paren(p) => {
                 write!(f, "(")?;
@@ -262,7 +262,8 @@ impl<'a> DaedalusDisplay for Expr<'a> {
             }
             ExprKind::Field(obj, field) => {
                 obj.fmt(f)?;
-                write!(f, ".{field}")?;
+                write!(f, ".")?;
+                field.fmt(f)?;
             }
             ExprKind::Index(a, b) => {
                 a.fmt(f)?;
@@ -351,7 +352,7 @@ impl<'a> Expr<'a> {
                         }
                     }
                     _ => {
-                        let ident = lexer.eat_token(Token::Ident)?;
+                        let ident = Ident::parse(lexer)?;
                         Expr {
                             kind: ExprKind::Ident(ident),
                         }
@@ -413,7 +414,7 @@ impl<'a> Expr<'a> {
         parent_expr: Self,
     ) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Dot)?;
-        let ident = lexer.eat_token(Token::Ident)?;
+        let ident = Ident::parse(lexer)?;
         Ok(Expr {
             kind: ExprKind::Field(Box::new(parent_expr), ident),
         })

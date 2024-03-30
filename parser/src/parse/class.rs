@@ -5,17 +5,19 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
-use super::Var;
+use super::{Ident, Var};
 
 #[derive(Debug)]
 pub struct Class<'a> {
-    pub ident: &'a str,
+    pub ident: Ident<'a>,
     pub fields: Vec<Var<'a>>,
 }
 
 impl<'a> DaedalusDisplay for Class<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        writeln!(f, "class {} {{", self.ident)?;
+        writeln!(f, "class ")?;
+        self.ident.fmt(f)?;
+        writeln!(f, " {{")?;
 
         f.push_indent();
         for var in self.fields.iter() {
@@ -35,7 +37,7 @@ impl<'a> Class<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Class)?;
 
-        let ident = lexer.eat_token(Token::Ident)?;
+        let ident = Ident::parse(lexer)?;
 
         lexer.eat_token(Token::OpenBrace)?;
 

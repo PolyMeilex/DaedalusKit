@@ -5,7 +5,7 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
-use super::{Expr, Ty};
+use super::{Expr, Ident, Ty};
 
 #[derive(Debug)]
 pub enum VarKind<'a> {
@@ -20,7 +20,7 @@ pub enum VarKind<'a> {
 
 #[derive(Debug)]
 pub struct Var<'a> {
-    pub ident: &'a str,
+    pub ident: Ident<'a>,
     pub ty: Ty<'a>,
     pub kind: VarKind<'a>,
 }
@@ -31,7 +31,8 @@ impl<'a> DaedalusDisplay for Var<'a> {
 
         write!(f, "var ")?;
         self.ty.fmt(f)?;
-        write!(f, " {}", self.ident)?;
+        write!(f, " ")?;
+        self.ident.fmt(f)?;
 
         match &self.kind {
             VarKind::Value { init: Some(init) } => {
@@ -64,7 +65,7 @@ impl<'a> Var<'a> {
         lexer.eat_token(Token::Var)?;
 
         let ty = Ty::parse(lexer)?;
-        let ident = lexer.eat_token(Token::Ident)?;
+        let ident = Ident::parse(lexer)?;
 
         let kind = if lexer.peek()? == Token::OpenBracket {
             lexer.eat_token(Token::OpenBracket)?;

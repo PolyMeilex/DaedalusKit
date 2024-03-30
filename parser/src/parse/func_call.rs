@@ -5,17 +5,18 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
-use super::Expr;
+use super::{Expr, Ident};
 
 #[derive(Debug)]
 pub struct FunctionCall<'a> {
-    pub ident: &'a str,
+    pub ident: Ident<'a>,
     pub args: Vec<Expr<'a>>,
 }
 
 impl<'a> DaedalusDisplay for FunctionCall<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        write!(f, "{}(", self.ident)?;
+        self.ident.fmt(f)?;
+        write!(f, "(")?;
         let mut iter = self.args.iter().peekable();
         while let Some(arg) = iter.next() {
             arg.fmt(f)?;
@@ -30,7 +31,7 @@ impl<'a> DaedalusDisplay for FunctionCall<'a> {
 
 impl<'a> FunctionCall<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
-        let ident = lexer.eat_token(Token::Ident)?;
+        let ident = Ident::parse(lexer)?;
 
         let args = Self::parse_paren(lexer)?;
 

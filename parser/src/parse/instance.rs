@@ -5,18 +5,23 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
-use super::Block;
+use super::{Block, Ident};
 
 #[derive(Debug)]
 pub struct Instance<'a> {
-    pub ident: &'a str,
-    pub parent: &'a str,
+    pub ident: Ident<'a>,
+    pub parent: Ident<'a>,
     pub block: Block<'a>,
 }
 
 impl<'a> DaedalusDisplay for Instance<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        writeln!(f, "instance {}({}) ", self.ident, self.parent)?;
+        write!(f, "instance ")?;
+        self.ident.fmt(f)?;
+        write!(f, "(")?;
+        self.parent.fmt(f)?;
+        write!(f, ") ")?;
+
         self.block.fmt(f)?;
         writeln!(f, ";")?;
         writeln!(f)?;
@@ -28,11 +33,11 @@ impl<'a> Instance<'a> {
     pub fn parse(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Instance)?;
 
-        let ident = lexer.eat_token(Token::Ident)?;
+        let ident = Ident::parse(lexer)?;
 
         lexer.eat_token(Token::OpenParen)?;
 
-        let parent = lexer.eat_token(Token::Ident)?;
+        let parent = Ident::parse(lexer)?;
 
         lexer.eat_token(Token::CloseParen)?;
 
