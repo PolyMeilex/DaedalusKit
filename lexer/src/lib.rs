@@ -85,6 +85,8 @@ pub enum Token {
     Else,
     #[token("func")]
     Func,
+    #[token("extern")]
+    Extern,
     #[token("prototype")]
     Prototype,
     #[token("null")]
@@ -182,6 +184,7 @@ impl std::fmt::Display for Token {
             Token::If => "'if'",
             Token::Else => "'else'",
             Token::Func => "'func'",
+            Token::Extern => "'extern'",
             Token::Prototype => "'prototype'",
             Token::Null => "'null'",
             Token::Class => "'class'",

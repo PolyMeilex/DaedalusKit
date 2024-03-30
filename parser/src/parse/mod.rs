@@ -15,6 +15,9 @@ pub use const_def::Const;
 mod func;
 pub use func::FunctionDefinition;
 
+mod extern_func;
+pub use extern_func::ExternFunctionDefinition;
+
 mod func_call;
 pub use func_call::FunctionCall;
 
@@ -54,6 +57,7 @@ pub enum Item {
     Var(Var),
     Const(Const),
     Func(FunctionDefinition),
+    ExternFunc(ExternFunctionDefinition),
 }
 
 pub struct File {
@@ -82,6 +86,9 @@ impl DaedalusDisplay for File {
                     writeln!(f, ";")?;
                 }
                 Item::Func(v) => {
+                    v.fmt(f)?;
+                }
+                Item::ExternFunc(v) => {
                     v.fmt(f)?;
                 }
             }
@@ -117,6 +124,9 @@ impl File {
                 Token::Func => {
                     items.push(Item::Func(FunctionDefinition::parse(lexer)?));
                 }
+                Token::Extern => {
+                    items.push(Item::ExternFunc(ExternFunctionDefinition::parse(lexer)?));
+                }
                 got => {
                     lexer.eat_any()?;
                     return Err(ParseError::unexpeced_token(got, lexer.span()));
@@ -144,6 +154,15 @@ mod tests {
         ($($arg:tt)*) => {
             diff(indoc::indoc!($($arg)*))
         };
+    }
+
+    #[test]
+    fn extern_func() {
+        diff!("extern func void a();");
+        diff!("extern func int b();");
+        diff!("extern func string c(var int a);");
+        diff!("extern func float d(var int a, var int b);");
+        diff!("extern func func e(var func a, var int b);");
     }
 
     #[test]
