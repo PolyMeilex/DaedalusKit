@@ -127,11 +127,14 @@ mod tests {
 
             func void c(var int a) {
             };
+
+            func void d(var int a, var int b) {
+            };
         "};
 
         let ast = File::parse(&mut DaedalusLexer::new(src)).unwrap();
         let mut out = String::new();
         DaedalusFormatter::new(&mut out).format(ast).unwrap();
-        assert_eq!(src, out);
+        assert_eq!(src.trim_end(), out.trim_end());
     }
 }

@@ -17,7 +17,17 @@ pub struct FunctionDefinition<'a> {
 
 impl<'a> DaedalusDisplay for FunctionDefinition<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        write!(f, "func {} {}() ", self.ty, self.ident)?;
+        write!(f, "func {} {}(", self.ty, self.ident)?;
+
+        let mut iter = self.args.iter().peekable();
+        while let Some(arg) = iter.next() {
+            arg.fmt(f)?;
+            if iter.peek().is_some() {
+                write!(f, ", ")?;
+            }
+        }
+
+        write!(f, ") ")?;
         self.block.fmt(f)?;
         writeln!(f, ";")?;
         writeln!(f)?;
