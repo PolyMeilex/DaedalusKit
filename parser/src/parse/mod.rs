@@ -130,6 +130,9 @@ mod tests {
 
             func void d(var int a, var int b) {
             };
+
+            func func e(var func a, var int b) {
+            };
         "};
 
         let ast = File::parse(&mut DaedalusLexer::new(src)).unwrap();
