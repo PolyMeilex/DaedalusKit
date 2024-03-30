@@ -11,20 +11,22 @@ pub mod parse;
 pub type ParseError = lexer::TokenError;
 
 fn main() {
-    let bytes = include_bytes!("../../DIA_bau_950_lobart.d");
+    // let bytes = include_bytes!("../../DIA_bau_950_lobart.d");
     // let bytes = include_bytes!("../../my.d");
-    parse(&std::path::PathBuf::from("DIA_bau_950_lobart.d"), bytes);
+    // parse(&std::path::PathBuf::from("DIA_bau_950_lobart.d"), bytes);
 
-    // let base_path =
-    //     "/home/poly/.local/share/Steam/steamapps/common/Gothic II/_work/Data/Scripts/Content/";
-    // let src = src_file::load(format!("{base_path}Gothic.src"));
-    //
-    // for path in src {
-    //     let bytes = std::fs::read(&path).unwrap();
-    //     let path = path.strip_prefix(base_path).unwrap();
-    //     println!("{path:?}");
-    //     parse(path, &bytes);
-    // }
+    let base_path = "./test_data/G2MDK-PolishScripts/Content/";
+    let mut src = src_file::load(format!("{base_path}Gothic.src"));
+    src.append(&mut src_file::load(format!("{base_path}Fight.src")));
+
+    let len = src.len();
+
+    for (id, path) in src.into_iter().enumerate() {
+        let bytes = std::fs::read(&path).unwrap();
+        let path = path.strip_prefix(base_path).unwrap();
+        println!("{path:?} ({} / {len})", id + 1);
+        parse(path, &bytes);
+    }
 }
 
 fn parse(path: &Path, bytes: &[u8]) {
