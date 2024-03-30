@@ -11,6 +11,7 @@ use super::{Block, Expr};
 pub struct IfStatement {
     pub has_else: bool,
     pub has_if: bool,
+    pub has_semi: bool,
     pub block: Block,
     pub condition: Option<Expr>,
     pub next: Option<Box<IfStatement>>,
@@ -37,7 +38,7 @@ impl DaedalusDisplay for IfStatement {
 
         if let Some(next) = self.next.as_ref() {
             next.fmt(f)?;
-        } else {
+        } else if self.has_semi {
             writeln!(f, ";")?;
         }
 
@@ -68,17 +69,22 @@ impl IfStatement {
 
         let mut next = None;
 
-        if lexer.peek()? == Token::Else {
+        let has_semi = if lexer.peek()? == Token::Else {
             let stmt = IfStatement::parse(lexer)?;
             next = Some(Box::new(stmt));
+            false
         } else if lexer.peek()? == Token::Semi {
             lexer.eat_token(Token::Semi)?;
-        }
+            true
+        } else {
+            false
+        };
 
         Ok(Self {
             block,
             has_else,
             has_if,
+            has_semi,
             condition,
             next,
         })
