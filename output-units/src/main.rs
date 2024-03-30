@@ -10,8 +10,7 @@ fn main() {
     let mut files = codespan_reporting::files::SimpleFiles::new();
     let mut errors = Vec::new();
 
-    // let src = src_file::load("/home/poly/Downloads/G2MDK-PolishScripts-master/Content/Gothic.src");
-    let src = src_file::load("/home/poly/.local/share/Steam/steamapps/common/Gothic II/_work/Data/Scripts/Content/Gothic.src");
+    let src = src_file::load("./test_data/G2MDK-PolishScripts/Content/Gothic.src");
     let files_bytes: Vec<_> = src
         .iter()
         .map(|path| (path, std::fs::read(path).unwrap()))
