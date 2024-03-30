@@ -33,6 +33,12 @@ impl Ty {
                     raw: raw.to_string(),
                 })
             }
+            Token::Instance => {
+                let raw = lexer.eat_token(Token::Instance)?;
+                Ok(Self {
+                    raw: raw.to_string(),
+                })
+            }
             got => {
                 lexer.eat_any()?;
                 Err(ParseError::unexpeced_token(got, lexer.span()))

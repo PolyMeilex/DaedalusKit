@@ -102,8 +102,8 @@ impl File {
     pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         let mut items = Vec::new();
 
-        while let Ok(token) = lexer.peek() {
-            match token {
+        loop {
+            match lexer.peek()? {
                 Token::Class => {
                     items.push(Item::Class(Class::parse(lexer)?));
                 }
@@ -126,6 +126,10 @@ impl File {
                 }
                 Token::Extern => {
                     items.push(Item::ExternFunc(ExternFunctionDefinition::parse(lexer)?));
+                }
+                Token::Eof => {
+                    lexer.eat_token(Token::Eof)?;
+                    break;
                 }
                 got => {
                     lexer.eat_any()?;

@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use bstr::{BString, ByteSlice};
-use lexer::{DaedalusLexer, Token, TokenError, TokenErrorKind};
+use lexer::{DaedalusLexer, Token, TokenError};
 use output_units::{OutputUnits, SvmClass};
 
 fn main() {
@@ -53,20 +53,10 @@ fn load_file<'a>(
     let mut lexer = lexer::DaedalusLexer::new(str);
 
     loop {
-        let token = lexer.peek();
-
-        let token = match token {
-            Ok(token) => token,
-            Err(err) => {
-                if let TokenErrorKind::EOF = err.kind {
-                    return Ok(());
-                } else {
-                    return Err(err);
-                }
+        match lexer.peek()? {
+            Token::Eof => {
+                return Ok(());
             }
-        };
-
-        match token {
             Token::Class => {
                 lexer.eat_token(Token::Class)?;
                 let ident = lexer.eat_token(Token::Ident)?;

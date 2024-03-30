@@ -8,8 +8,6 @@ pub enum TokenErrorKind {
     UnexpecedToken { got: Token },
     #[error("Expected {expected} got {got}")]
     ExpectedToken { expected: Token, got: Token },
-    #[error("Unexpected end of file")]
-    EOF,
 }
 
 type LexBacktrace = std::backtrace::Backtrace;
@@ -23,14 +21,6 @@ pub struct TokenError {
 }
 
 impl TokenError {
-    pub fn eof(span: logos::Span) -> Self {
-        Self {
-            kind: TokenErrorKind::EOF,
-            span,
-            backtrace: LexBacktrace::capture(),
-        }
-    }
-
     pub fn unkonown_token(span: logos::Span) -> Self {
         Self {
             kind: TokenErrorKind::UnkonownToken,
@@ -170,6 +160,7 @@ pub enum Token {
     ShiftLeft,
     #[token(">>")]
     ShiftRight,
+    Eof,
 }
 
 impl std::fmt::Display for Token {
@@ -224,6 +215,7 @@ impl std::fmt::Display for Token {
             Token::Slash => "'/'",
             Token::ShiftLeft => "'<<'",
             Token::ShiftRight => "'>>'",
+            Token::Eof => "EOF",
         };
         write!(f, "{str}")
     }
@@ -302,7 +294,7 @@ impl<'a> DaedalusLexer<'a> {
 
     pub fn eat_one_raw(&mut self) -> Result<Token, TokenError> {
         let Some(token) = self.lexer.next() else {
-            return Err(TokenError::eof(self.span()));
+            return Ok(Token::Eof);
         };
 
         let Ok(token) = token else {

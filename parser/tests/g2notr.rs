@@ -1,5 +1,5 @@
-use lexer::DaedalusLexer;
-use parser::{fmt::DaedalusFormatter, parse::File, ParseError, ParseErrorKind};
+use lexer::{DaedalusLexer, Token};
+use parser::{fmt::DaedalusFormatter, parse::File};
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -14,13 +14,8 @@ fn parser_g2notr_diff() {
 
         loop {
             let src_token = match src_lex.eat_any() {
+                Ok(Token::Eof) => break,
                 Ok(v) => v,
-                Err(ParseError {
-                    kind: ParseErrorKind::EOF,
-                    ..
-                }) => {
-                    break;
-                }
                 Err(err) => panic!("{err:?}"),
             };
             let out_token = out_lex.eat_any().unwrap();
