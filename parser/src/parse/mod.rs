@@ -24,9 +24,6 @@ pub use block::{Block, BlockItem};
 mod return_statement;
 pub use return_statement::ReturnStatement;
 
-mod assign_statement;
-pub use assign_statement::AssignStatement;
-
 mod class;
 pub use class::Class;
 
@@ -36,8 +33,12 @@ pub use expr::Expr;
 mod ty;
 pub use ty::Ty;
 
-use crate::ParseError;
+use crate::{
+    fmt::{DaedalusDisplay, DaedalusFormatter},
+    ParseError,
+};
 
+#[derive(Debug)]
 pub enum Item<'a> {
     Class(Class<'a>),
     Instance(Instance<'a>),
@@ -48,6 +49,32 @@ pub enum Item<'a> {
 
 pub struct File<'a> {
     pub items: Vec<Item<'a>>,
+}
+
+impl<'a> DaedalusDisplay for File<'a> {
+    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
+        for item in &self.items {
+            match item {
+                Item::Class(v) => {
+                    v.fmt(f)?;
+                }
+                Item::Instance(v) => {
+                    v.fmt(f)?;
+                }
+                Item::Var(v) => {
+                    v.fmt(f)?;
+                }
+                Item::Func(v) => {
+                    v.fmt(f)?;
+                }
+                Item::Const(v) => {
+                    v.fmt(f)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl<'a> File<'a> {
@@ -80,5 +107,31 @@ impl<'a> File<'a> {
         }
 
         Ok(Self { items })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use indoc::indoc;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn func() {
+        let src = indoc! {"
+            func void a() {
+            };
+
+            func void b() {
+            };
+
+            func void c(var int a) {
+            };
+        "};
+
+        let ast = File::parse(&mut DaedalusLexer::new(src)).unwrap();
+        let mut out = String::new();
+        DaedalusFormatter::new(&mut out).format(ast).unwrap();
+        assert_eq!(src, out);
     }
 }

@@ -5,15 +5,14 @@ use crate::{
 use lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
-use super::{AssignStatement, FunctionCall, IfStatement, ReturnStatement, Var};
+use super::{Expr, IfStatement, ReturnStatement, Var};
 
 #[derive(Debug)]
 pub enum BlockItem<'a> {
     Var(Var<'a>),
     If(IfStatement<'a>),
-    FnCall(FunctionCall<'a>),
     Return(ReturnStatement<'a>),
-    Assign(AssignStatement<'a>),
+    Expr(Expr<'a>),
 }
 
 #[derive(Debug)]
@@ -35,16 +34,12 @@ impl<'a> DaedalusDisplay for Block<'a> {
                 BlockItem::If(i) => {
                     i.fmt(f)?;
                 }
-                BlockItem::FnCall(call) => {
-                    f.write_indent()?;
-                    call.fmt(f)?;
-                    writeln!(f, ";")?;
-                }
                 BlockItem::Return(ret) => {
                     ret.fmt(f)?;
                 }
-                BlockItem::Assign(assign) => {
-                    assign.fmt(f)?;
+                BlockItem::Expr(expr) => {
+                    f.write_indent()?;
+                    expr.fmt(f)?;
                 }
             }
         }
@@ -89,26 +84,11 @@ impl<'a> Block<'a> {
                     continue;
                 }
                 Token::Ident => {
-                    let mut tmp = lexer.clone();
-                    tmp.eat_any()?;
-
-                    match tmp.peek()? {
-                        Token::OpenParen => {
-                            items.push(BlockItem::FnCall(FunctionCall::parse(lexer)?));
-                            lexer.eat_token(Token::Semi)?;
-                            continue;
-                        }
-                        Token::Eq => {
-                            items.push(BlockItem::Assign(AssignStatement::parse(lexer)?));
-                            continue;
-                        }
-                        _ => {}
-                    }
+                    items.push(BlockItem::Expr(Expr::parse(lexer)?));
+                    lexer.eat_token(Token::Semi)?;
                 }
                 _ => {}
             }
-
-            lexer.eat_any()?;
         }
 
         lexer.eat_token(Token::CloseBrace)?;

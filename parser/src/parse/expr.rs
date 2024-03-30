@@ -158,7 +158,7 @@ pub struct Lit<'a> {
 #[derive(Debug)]
 pub enum ExprKind<'a> {
     Binary(AssocOp, Box<Expr<'a>>, Box<Expr<'a>>),
-    // For not only `!`/`-` unary op
+    /// For not only `!`/`-` unary op
     Unary(UnaryOp, Box<Expr<'a>>),
 
     Lit(Lit<'a>),
@@ -170,6 +170,9 @@ pub enum ExprKind<'a> {
     Field(Box<Expr<'a>>, &'a str),
     /// a[b]
     Index(Box<Expr<'a>>, Box<Expr<'a>>),
+
+    /// eg. `a = b`
+    Assign(Box<Expr<'a>>, Box<Expr<'a>>),
 }
 
 #[derive(Debug)]
@@ -216,6 +219,12 @@ impl<'a> DaedalusDisplay for Expr<'a> {
                 b.fmt(f)?;
                 write!(f, "]")?;
             }
+            ExprKind::Assign(a, b) => {
+                a.fmt(f)?;
+                write!(f, " = ")?;
+                b.fmt(f)?;
+                writeln!(f, ";")?;
+            }
         }
         Ok(())
     }
@@ -247,28 +256,38 @@ impl<'a> Expr<'a> {
 
     fn parse_without_op(lexer: &mut DaedalusLexer<'a>) -> Result<Self, ParseError> {
         let mut peek_lexer = lexer.clone();
-        let kind = match peek_lexer.peek()? {
+        let expr = match peek_lexer.peek()? {
             Token::Bang => {
                 lexer.eat_token(Token::Bang)?;
                 let expr = Self::parse_without_op(lexer)?;
-                ExprKind::Unary(UnaryOp::Not, Box::new(expr))
+                Expr {
+                    kind: ExprKind::Unary(UnaryOp::Not, Box::new(expr)),
+                }
             }
             Token::Minus => {
                 lexer.eat_token(Token::Minus)?;
                 let expr = Self::parse_without_op(lexer)?;
-                ExprKind::Unary(UnaryOp::Negative, Box::new(expr))
+                Expr {
+                    kind: ExprKind::Unary(UnaryOp::Negative, Box::new(expr)),
+                }
             }
             Token::String => {
                 let raw = lexer.eat_token(Token::String)?;
-                ExprKind::Lit(Lit { raw })
+                Expr {
+                    kind: ExprKind::Lit(Lit { raw }),
+                }
             }
             Token::Integer => {
                 let raw = lexer.eat_token(Token::Integer)?;
-                ExprKind::Lit(Lit { raw })
+                Expr {
+                    kind: ExprKind::Lit(Lit { raw }),
+                }
             }
             Token::Float => {
                 let raw = lexer.eat_token(Token::Float)?;
-                ExprKind::Lit(Lit { raw })
+                Expr {
+                    kind: ExprKind::Lit(Lit { raw }),
+                }
             }
             Token::Ident => {
                 peek_lexer.eat_token(Token::Ident)?;
@@ -276,46 +295,27 @@ impl<'a> Expr<'a> {
                 let expr = match peek_lexer.peek()? {
                     Token::OpenParen => {
                         let call = FunctionCall::parse(lexer)?;
-                        ExprKind::Call(call)
+                        Expr {
+                            kind: ExprKind::Call(call),
+                        }
                     }
                     _ => {
                         let ident = lexer.eat_token(Token::Ident)?;
-                        ExprKind::Ident(ident)
-                    }
-                };
-
-                let expr = if lexer.peek()? == Token::OpenBracket {
-                    lexer.eat_token(Token::OpenBracket)?;
-                    let index = Expr::parse(lexer)?;
-                    lexer.eat_token(Token::CloseBracket)?;
-                    ExprKind::Index(Box::new(Expr { kind: expr }), Box::new(index))
-                } else {
-                    expr
-                };
-
-                match peek_lexer.peek()? {
-                    Token::Dot => {
-                        lexer.eat_token(Token::Dot)?;
-                        let ident = lexer.eat_token(Token::Ident)?;
-                        let expr = ExprKind::Field(Box::new(Expr { kind: expr }), ident);
-
-                        if lexer.peek()? == Token::OpenBracket {
-                            lexer.eat_token(Token::OpenBracket)?;
-                            let index = Expr::parse(lexer)?;
-                            lexer.eat_token(Token::CloseBracket)?;
-                            ExprKind::Index(Box::new(Expr { kind: expr }), Box::new(index))
-                        } else {
-                            expr
+                        Expr {
+                            kind: ExprKind::Ident(ident),
                         }
                     }
-                    _ => expr,
-                }
+                };
+
+                Self::parse_reference(lexer, expr)?
             }
             Token::OpenParen => {
                 lexer.eat_token(Token::OpenParen)?;
                 let expr = Expr::parse(lexer)?;
                 lexer.eat_token(Token::CloseParen)?;
-                ExprKind::Paren(Box::new(expr))
+                Expr {
+                    kind: ExprKind::Paren(Box::new(expr)),
+                }
             }
             got => {
                 peek_lexer.eat_any()?;
@@ -323,6 +323,58 @@ impl<'a> Expr<'a> {
             }
         };
 
-        Ok(Expr { kind })
+        let expr = if lexer.peek()? == Token::Eq {
+            lexer.eat_token(Token::Eq)?;
+            let right = Expr::parse(lexer)?;
+            Expr {
+                kind: ExprKind::Assign(Box::new(expr), Box::new(right)),
+            }
+        } else {
+            expr
+        };
+
+        Ok(expr)
+    }
+
+    pub fn parse_reference(
+        lexer: &mut DaedalusLexer<'a>,
+        parent_expr: Self,
+    ) -> Result<Self, ParseError> {
+        let expr = if lexer.peek()? == Token::OpenBracket {
+            Self::parse_array_index(lexer, parent_expr)?
+        } else {
+            parent_expr
+        };
+
+        if lexer.peek()? == Token::Dot {
+            let expr = Self::parse_field_access(lexer, expr)?;
+            Self::parse_reference(lexer, expr)
+        } else {
+            Ok(expr)
+        }
+    }
+
+    pub fn parse_array_index(
+        lexer: &mut DaedalusLexer<'a>,
+        parent_expr: Self,
+    ) -> Result<Self, ParseError> {
+        lexer.eat_token(Token::OpenBracket)?;
+        let index = Expr::parse(lexer)?;
+        lexer.eat_token(Token::CloseBracket)?;
+
+        Ok(Expr {
+            kind: ExprKind::Index(Box::new(parent_expr), Box::new(index)),
+        })
+    }
+
+    pub fn parse_field_access(
+        lexer: &mut DaedalusLexer<'a>,
+        parent_expr: Self,
+    ) -> Result<Self, ParseError> {
+        lexer.eat_token(Token::Dot)?;
+        let ident = lexer.eat_token(Token::Ident)?;
+        Ok(Expr {
+            kind: ExprKind::Field(Box::new(parent_expr), ident),
+        })
     }
 }
