@@ -223,7 +223,6 @@ impl<'a> DaedalusDisplay for Expr<'a> {
                 a.fmt(f)?;
                 write!(f, " = ")?;
                 b.fmt(f)?;
-                writeln!(f, ";")?;
             }
         }
         Ok(())

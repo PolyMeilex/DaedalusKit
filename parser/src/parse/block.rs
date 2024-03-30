@@ -40,6 +40,7 @@ impl<'a> DaedalusDisplay for Block<'a> {
                 BlockItem::Expr(expr) => {
                     f.write_indent()?;
                     expr.fmt(f)?;
+                    writeln!(f, ";")?;
                 }
             }
         }

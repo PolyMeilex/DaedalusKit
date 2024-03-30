@@ -1,11 +1,9 @@
 #![allow(clippy::single_match)]
 
-use std::process::exit;
+use std::{path::Path, process::exit};
 
 use fmt::DaedalusFormatter;
 use lexer::DaedalusLexer;
-
-use crate::parse::Item;
 
 mod fmt;
 pub mod parse;
@@ -13,17 +11,29 @@ pub mod parse;
 pub type ParseError = lexer::TokenError;
 
 fn main() {
-    // let bytes = include_bytes!("../DIA_vlk_439_vatras.d");
     let bytes = include_bytes!("../../DIA_bau_950_lobart.d");
-    // let bytes = include_bytes!("../../lobart.d");
+    // let bytes = include_bytes!("../../my.d");
+    parse(&std::path::PathBuf::from("DIA_bau_950_lobart.d"), bytes);
 
-    let (src, enc, _) = encoding_rs::WINDOWS_1250.decode(bytes);
-    dbg!(enc);
+    // let base_path =
+    //     "/home/poly/.local/share/Steam/steamapps/common/Gothic II/_work/Data/Scripts/Content/";
+    // let src = src_file::load(format!("{base_path}Gothic.src"));
+    //
+    // for path in src {
+    //     let bytes = std::fs::read(&path).unwrap();
+    //     let path = path.strip_prefix(base_path).unwrap();
+    //     println!("{path:?}");
+    //     parse(path, &bytes);
+    // }
+}
+
+fn parse(path: &Path, bytes: &[u8]) {
+    let (src, _, _) = encoding_rs::WINDOWS_1250.decode(bytes);
 
     let mut lexer = DaedalusLexer::new(&src);
 
-    let emit_error = |err: &ParseError| emit_error(&src, err);
-    let mut formatter = DaedalusFormatter::default();
+    let emit_error = |err: &ParseError| emit_error(path, &src, err);
+    let mut formatter = DaedalusFormatter::new(fmt::IoFmt(std::io::stdout()));
 
     let file = match parse::File::parse(&mut lexer) {
         Ok(file) => file,
@@ -33,28 +43,10 @@ fn main() {
         }
     };
 
-    for item in file.items {
-        match item {
-            Item::Class(v) => {
-                formatter.format(v).unwrap();
-            }
-            Item::Instance(v) => {
-                formatter.format(v).unwrap();
-            }
-            Item::Var(v) => {
-                formatter.format(v).unwrap();
-            }
-            Item::Func(v) => {
-                formatter.format(v).unwrap();
-            }
-            Item::Const(v) => {
-                formatter.format(v).unwrap();
-            }
-        }
-    }
+    formatter.format(file).unwrap();
 }
 
-fn emit_error(src: &str, err: &ParseError) {
+fn emit_error(path: &Path, src: &str, err: &ParseError) {
     use codespan_reporting::diagnostic::{Diagnostic, Label};
     use codespan_reporting::files::SimpleFiles;
     use codespan_reporting::term;
@@ -62,7 +54,7 @@ fn emit_error(src: &str, err: &ParseError) {
 
     let mut files = SimpleFiles::new();
 
-    let file_id = files.add("file.d", src);
+    let file_id = files.add(path.to_string_lossy(), src);
 
     let mut labels =
         vec![Label::primary(file_id, err.span().clone()).with_message(err.to_string())];
