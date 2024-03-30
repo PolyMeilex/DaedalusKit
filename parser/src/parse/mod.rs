@@ -142,7 +142,26 @@ mod tests {
         diff! {"
             func int a() {
                 a = abc[1].cba[2].xyz.abc;
+            };
+        "};
+        diff! {"
+            func int a() {
                 abc[1].cba[2].xyz.abc[2] = 5;
+            };
+        "};
+        diff! {"
+            func int a() {
+                abc[A].cba[B].xyz.abc[C] = \"test\";
+            };
+        "};
+        diff! {"
+            func int a() {
+                b = \"test\" + 1.5;
+            };
+        "};
+        diff! {"
+            func int a() {
+                c = \"test\" + 1;
             };
         "};
     }

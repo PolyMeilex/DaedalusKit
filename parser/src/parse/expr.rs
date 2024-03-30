@@ -151,8 +151,15 @@ pub enum UnaryOp {
 }
 
 #[derive(Debug)]
+pub enum LitKind<'a> {
+    Intager(&'a str),
+    Float(&'a str),
+    String(&'a str),
+}
+
+#[derive(Debug)]
 pub struct Lit<'a> {
-    raw: &'a str,
+    kind: LitKind<'a>,
 }
 
 #[derive(Debug)]
@@ -195,8 +202,20 @@ impl<'a> DaedalusDisplay for Expr<'a> {
                 }
                 v.fmt(f)?;
             }
-            ExprKind::Lit(lit) => {
-                write!(f, "{}", lit.raw)?;
+            ExprKind::Lit(Lit {
+                kind: LitKind::String(lit),
+            }) => {
+                write!(f, "\"{}\"", lit)?;
+            }
+            ExprKind::Lit(Lit {
+                kind: LitKind::Intager(lit),
+            }) => {
+                write!(f, "{}", lit)?;
+            }
+            ExprKind::Lit(Lit {
+                kind: LitKind::Float(lit),
+            }) => {
+                write!(f, "{}", lit)?;
             }
             ExprKind::Call(call) => {
                 call.fmt(f)?;
@@ -273,19 +292,25 @@ impl<'a> Expr<'a> {
             Token::String => {
                 let raw = lexer.eat_token(Token::String)?;
                 Expr {
-                    kind: ExprKind::Lit(Lit { raw }),
+                    kind: ExprKind::Lit(Lit {
+                        kind: LitKind::String(raw),
+                    }),
                 }
             }
             Token::Integer => {
                 let raw = lexer.eat_token(Token::Integer)?;
                 Expr {
-                    kind: ExprKind::Lit(Lit { raw }),
+                    kind: ExprKind::Lit(Lit {
+                        kind: LitKind::Intager(raw),
+                    }),
                 }
             }
             Token::Float => {
                 let raw = lexer.eat_token(Token::Float)?;
                 Expr {
-                    kind: ExprKind::Lit(Lit { raw }),
+                    kind: ExprKind::Lit(Lit {
+                        kind: LitKind::Float(raw),
+                    }),
                 }
             }
             Token::Ident => {
