@@ -46,10 +46,15 @@ impl DaedalusDisplay for Const {
 
                 if let Some(init) = init {
                     write!(f, " = {{")?;
-                    for expr in init {
+
+                    let mut iter = init.iter().peekable();
+                    while let Some(expr) = iter.next() {
                         expr.fmt(f)?;
-                        write!(f, ", ")?;
+                        if iter.peek().is_some() {
+                            write!(f, ", ")?;
+                        }
                     }
+
                     write!(f, "}}")?;
                 }
             }
