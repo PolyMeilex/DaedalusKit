@@ -38,6 +38,8 @@ use crate::{
     ParseError,
 };
 
+use std::fmt::Write;
+
 #[derive(Debug)]
 pub enum Item<'a> {
     Class(Class<'a>),
@@ -63,11 +65,13 @@ impl<'a> DaedalusDisplay for File<'a> {
                 }
                 Item::Var(v) => {
                     v.fmt(f)?;
-                }
-                Item::Func(v) => {
-                    v.fmt(f)?;
+                    writeln!(f, ";")?;
                 }
                 Item::Const(v) => {
+                    v.fmt(f)?;
+                    writeln!(f, ";")?;
+                }
+                Item::Func(v) => {
                     v.fmt(f)?;
                 }
             }
