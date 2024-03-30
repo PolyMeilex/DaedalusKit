@@ -22,8 +22,8 @@ impl DatBuilder {
         }
     }
 
-    fn gen_mdl_set_visual(&mut self) {
-        self.push_symbol(Symbol {
+    fn gen_mdl_set_visual(&mut self) -> u32 {
+        let fn_symbol = self.push_symbol(Symbol {
             name: Some(ZString::from("MDL_SETVISUAL")),
             props: Properties {
                 off_cls_ret: 0,
@@ -74,6 +74,7 @@ impl DatBuilder {
             data: SymbolData::None,
             parent: None,
         });
+        fn_symbol
     }
 
     fn gen_c_npc(&mut self) -> (u32, u32) {
@@ -249,7 +250,7 @@ impl DatBuilder {
             parent: None,
         });
 
-        dat.gen_mdl_set_visual();
+        let mdl_set_visual_id = dat.gen_mdl_set_visual();
         let (_c_npc_id, c_ncp_attribute_id) = dat.gen_c_npc();
 
         let pc_hero_id = dat.gen_pc_hero();
@@ -259,28 +260,29 @@ impl DatBuilder {
 
         let f10000_id = dat.gen_f10000();
 
-        let pc_hero_addr = dat.bytecode.block(&[
-            // attribute[0] = 40
-            Instruction::push_i(20),
-            Instruction::push_v(c_ncp_attribute_id),
-            Instruction::mov_i(),
+        let pc_hero_addr = dat
+            .bytecode
+            .block_builder()
+            // attribute[0] = 20
+            .var_assign_int((c_ncp_attribute_id, 0), 20)
             // attribute[1] = 40
-            Instruction::push_i(40),
-            Instruction::push_vv(c_ncp_attribute_id, 1),
-            Instruction::mov_i(),
+            .var_assign_int((c_ncp_attribute_id, 1), 40)
             // Mdl_SetVisual(self, "HUMANS.MDS")
-            Instruction::push_vi(pc_hero_id),
-            Instruction::push_v(f10000_id),
-            Instruction::be(1),
-            Instruction::rsr(),
-        ]);
+            .extend(&[
+                Instruction::push_var_instance(pc_hero_id),
+                Instruction::push_var(f10000_id),
+                Instruction::call_extern(mdl_set_visual_id),
+            ])
+            .ret()
+            .done();
+
         dat.symbols[pc_hero_id as usize].data = SymbolData::Address(pc_hero_addr as i32);
 
-        let startup_global_addr = dat.bytecode.block(&[Instruction::rsr()]);
+        let startup_global_addr = dat.bytecode.block_builder().ret().done();
         dat.symbols[startup_global_id as usize].data =
             SymbolData::Address(startup_global_addr as i32);
 
-        let init_global_addr = dat.bytecode.block(&[Instruction::rsr()]);
+        let init_global_addr = dat.bytecode.block_builder().ret().done();
         dat.symbols[init_global_id as usize].data = SymbolData::Address(init_global_addr as i32);
 
         let mut symbol_ids: Vec<_> = dat

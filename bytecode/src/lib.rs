@@ -20,11 +20,15 @@ impl Bytecode {
     }
 
     pub fn block<'a>(&mut self, i: impl IntoIterator<Item = &'a Instruction>) -> u32 {
-        let addr = self.bytecode.len();
-        for i in i {
-            i.encode(&mut self.bytecode).unwrap();
+        self.block_builder().extend(i).done()
+    }
+
+    pub fn block_builder(&mut self) -> BytecodeBlockBuilder<'_> {
+        let addr = self.bytecode.len() as u32;
+        BytecodeBlockBuilder {
+            addr,
+            bytecode: &mut self.bytecode,
         }
-        addr as u32
     }
 
     pub fn decode(mut r: impl Read) -> io::Result<Self> {
@@ -56,6 +60,61 @@ impl Bytecode {
 }
 
 #[derive(Debug)]
+pub struct BytecodeBlockBuilder<'a> {
+    addr: u32,
+    bytecode: &'a mut Vec<u8>,
+}
+
+impl<'a> BytecodeBlockBuilder<'a> {
+    fn encode(&mut self, i: &Instruction) {
+        i.encode(&mut self.bytecode).unwrap();
+    }
+
+    pub fn push_instruction(mut self, instruction: Instruction) -> Self {
+        self.encode(&instruction);
+        self
+    }
+
+    pub fn extend<'b>(mut self, i: impl IntoIterator<Item = &'b Instruction>) -> Self {
+        for i in i {
+            self.encode(i);
+        }
+        self
+    }
+
+    pub fn ret(mut self) -> Self {
+        self.encode(&Instruction::ret());
+        self
+    }
+
+    pub fn var_assign_int(mut self, (array_symbol, id): (u32, u8), value: u32) -> Self {
+        self.encode(&Instruction::push_int(value));
+        if id == 0 {
+            self.encode(&Instruction::push_var(array_symbol));
+        } else {
+            self.encode(&Instruction::push_var_array(array_symbol, id));
+        }
+        self.encode(&Instruction::mov_int());
+        self
+    }
+
+    pub fn instance_assign_int(mut self, (array_symbol, id): (u32, u8), value: u32) -> Self {
+        self.encode(&Instruction::push_int(value));
+        if id == 0 {
+            self.encode(&Instruction::push_var(array_symbol));
+        } else {
+            self.encode(&Instruction::push_var_array(array_symbol, id));
+        }
+        self.encode(&Instruction::mov_int());
+        self
+    }
+
+    pub fn done(self) -> u32 {
+        self.addr
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Instruction {
     pub opcode: Opcode,
     pub data: InstructionData,
@@ -65,15 +124,15 @@ impl Instruction {
     pub fn decode(mut r: impl Read) -> std::io::Result<Self> {
         let opcode = Opcode::from_u8(r.read_u8()?).unwrap();
         let data = match opcode {
-            Opcode::Bl | Opcode::Bz | Opcode::B => {
+            Opcode::Call | Opcode::Bz | Opcode::B => {
                 let a = r.read_u32::<LittleEndian>()?;
                 InstructionData::Address(a)
             }
-            Opcode::PushI => {
+            Opcode::PushInt => {
                 let i = r.read_i32::<LittleEndian>()?;
                 InstructionData::Immediate(i)
             }
-            Opcode::Be | Opcode::PushV | Opcode::PushVI | Opcode::GMovI => {
+            Opcode::CallExtern | Opcode::PushVar | Opcode::PushVarInstance | Opcode::GMovI => {
                 let s = r.read_u32::<LittleEndian>()?;
                 InstructionData::Symbol(s)
             }
@@ -120,57 +179,57 @@ impl Instruction {
         std::mem::size_of::<u8>() + data_size
     }
 
-    pub fn push_i(immediate: u32) -> Self {
+    pub fn push_int(immediate: u32) -> Self {
         Self {
-            opcode: Opcode::PushI,
+            opcode: Opcode::PushInt,
             data: InstructionData::Immediate(immediate as i32),
         }
     }
 
-    pub fn push_v(symbol: u32) -> Self {
+    pub fn push_var(symbol: u32) -> Self {
         Self {
-            opcode: Opcode::PushV,
+            opcode: Opcode::PushVar,
             data: InstructionData::Immediate(symbol as i32),
         }
     }
 
-    pub fn mov_i() -> Self {
+    pub fn mov_int() -> Self {
         Self {
-            opcode: Opcode::MovI,
+            opcode: Opcode::MovInt,
             data: InstructionData::None,
         }
     }
 
-    pub fn push_vv(symbol: u32, index: u8) -> Self {
+    pub fn push_var_array(symbol: u32, index: u8) -> Self {
         Self {
             opcode: Opcode::PushVV,
             data: InstructionData::SymbolIndex { symbol, index },
         }
     }
 
-    pub fn push_vi(symbol: u32) -> Self {
+    pub fn push_var_instance(symbol: u32) -> Self {
         Self {
-            opcode: Opcode::PushVI,
+            opcode: Opcode::PushVarInstance,
             data: InstructionData::Symbol(symbol),
         }
     }
 
-    pub fn be(symbol: u32) -> Self {
+    pub fn call_extern(symbol: u32) -> Self {
         Self {
-            opcode: Opcode::Be,
+            opcode: Opcode::CallExtern,
             data: InstructionData::Symbol(symbol),
         }
     }
 
-    pub fn rsr() -> Self {
+    pub fn ret() -> Self {
         Self {
-            opcode: Opcode::Rsr,
+            opcode: Opcode::Return,
             data: InstructionData::None,
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum InstructionData {
     Address(u32),
     Immediate(i32),
@@ -213,7 +272,7 @@ pub enum Opcode {
     Gt = 8,
 
     /// Write `b` to `x` as an integer.
-    MovI = 9,
+    MovInt = 9,
 
     /// Test if `a == 1` or `b == 1` and put `1` or `0` onto the stack if
     /// the test is true or false respectively.
@@ -277,22 +336,22 @@ pub enum Opcode {
     Nop = 45,
 
     /// Return from the currently running function
-    Rsr = 60,
+    Return = 60,
 
     /// Call the function at the address provided in the instruction.
-    Bl = 61,
+    Call = 61,
 
     /// Call the external function at the symbol index provided in the instruction.
-    Be = 62,
+    CallExtern = 62,
 
     /// Push the immediate value provided in the instruction onto the stack as an integer.
-    PushI = 64,
+    PushInt = 64,
 
     /// Push the symbol with the index provided in the instruction onto the stack as a reference.
-    PushV = 65,
+    PushVar = 65,
 
     /// Push the instance with the symbol index provided in the instruction onto the stack as a reference.
-    PushVI = 67,
+    PushVarInstance = 67,
 
     /// Write `m` to `x` as a string.
     MovS = 70,
