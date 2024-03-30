@@ -1,0 +1,3 @@
+[submodule "test_data/G2MDK-PolishScripts"]
+	path = test_data/G2MDK-PolishScripts
+	url = https://github.com/Fabiosek/G2MDK-PolishScripts.git
