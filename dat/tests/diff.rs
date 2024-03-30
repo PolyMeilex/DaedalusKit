@@ -1,5 +1,7 @@
 use std::io::Cursor;
 
+// TODO: Don't want to commit a few MB .dat file in the repo
+#[ignore]
 #[test]
 fn diff_gothic2_nor() {
     let src = std::fs::read("../test_data/gothic_g2nor.dat").unwrap();

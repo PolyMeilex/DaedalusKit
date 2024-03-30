@@ -12,5 +12,5 @@ indexmap = "2.2.5"
 
 codespan-reporting.workspace = true
 
-[dev-dependencies]
-zenkit.workspace = true
+# [dev-dependencies]
+# zenkit.workspace = true

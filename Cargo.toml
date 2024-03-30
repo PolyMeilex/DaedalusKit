@@ -1,12 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["bytecode", "dat", "lexer", "output-units", "parser", "src-file", "zenkit"]
+members = ["bytecode", "dat", "lexer", "output-units", "parser", "src-file"]
 
 [workspace.dependencies]
 bytecode = { path = "./bytecode" }
 lexer = { path = "./lexer" }
 src-file = { path = "./src-file" }
-zenkit = { path = "./zenkit" }
+# Off for now, until it is statically linkable
+# zenkit = { path = "./zenkit" }
 
 bitflags = "2.4.2"
 bstr = "1.9.1"
