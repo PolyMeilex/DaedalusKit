@@ -113,31 +113,37 @@ impl<'a> File<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use indoc::indoc;
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn func() {
-        let src = indoc! {"
-            func void a() {
-            };
-
-            func void b() {
-            };
-
-            func void c(var int a) {
-            };
-
-            func void d(var int a, var int b) {
-            };
-
-            func func e(var func a, var int b) {
-            };
-        "};
-
+    fn diff(src: &str) {
         let ast = File::parse(&mut DaedalusLexer::new(src)).unwrap();
         let mut out = String::new();
         DaedalusFormatter::new(&mut out).format(ast).unwrap();
         assert_eq!(src.trim_end(), out.trim_end());
+    }
+
+    macro_rules! diff {
+        ($($arg:tt)*) => {
+            diff(indoc::indoc!($($arg)*))
+        };
+    }
+
+    #[test]
+    fn func() {
+        diff!("func void a() {};");
+        diff!("func int b() {};");
+        diff!("func string c(var int a) {};");
+        diff!("func float d(var int a, var int b) {};");
+        diff!("func func e(var func a, var int b) {};");
+    }
+
+    #[test]
+    fn expr() {
+        diff! {"
+            func int a() {
+                a = abc[1].cba[2].xyz.abc;
+                abc[1].cba[2].xyz.abc[2] = 5;
+            };
+        "};
     }
 }

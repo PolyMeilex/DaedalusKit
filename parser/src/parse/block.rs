@@ -22,6 +22,10 @@ pub struct Block<'a> {
 
 impl<'a> DaedalusDisplay for Block<'a> {
     fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
+        if self.items.is_empty() {
+            return write!(f, "{{}}");
+        }
+
         writeln!(f, "{{")?;
 
         f.push_indent();
