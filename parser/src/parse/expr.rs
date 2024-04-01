@@ -194,7 +194,7 @@ pub enum LitKind {
 
 #[derive(Debug)]
 pub struct Lit {
-    kind: LitKind,
+    pub kind: LitKind,
 }
 
 #[derive(Debug)]

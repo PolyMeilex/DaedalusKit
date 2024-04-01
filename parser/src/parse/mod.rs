@@ -7,10 +7,10 @@ mod prototype;
 pub use prototype::Prototype;
 
 mod var;
-pub use var::Var;
+pub use var::{Var, VarKind};
 
 mod const_def;
-pub use const_def::Const;
+pub use const_def::{Const, ConstKind};
 
 mod func;
 pub use func::FunctionDefinition;
@@ -34,7 +34,7 @@ mod class;
 pub use class::Class;
 
 mod expr;
-pub use expr::Expr;
+pub use expr::{Expr, ExprKind, Lit, LitKind};
 
 mod ty;
 pub use ty::Ty;
