@@ -249,8 +249,8 @@ pub mod properties {
         pub file_index: u19,
         pub line_start: u19,
         pub line_count: u19,
-        pub col_start: u24,
-        pub col_count: u24,
+        pub char_start: u24,
+        pub char_count: u24,
     }
 
     impl SymbolCodeSpan {
@@ -263,8 +263,8 @@ pub mod properties {
                 file_index: u19::new(id),
                 line_start: u19::new(line_start),
                 line_count: u19::new(line_count),
-                col_start: u24::new(col_start),
-                col_count: u24::new(col_count),
+                char_start: u24::new(col_start),
+                char_count: u24::new(col_count),
             }
         }
 
@@ -272,15 +272,15 @@ pub mod properties {
             let file_index = u19(r.read_u32::<LittleEndian>()?);
             let line_start = u19(r.read_u32::<LittleEndian>()?);
             let line_count = u19(r.read_u32::<LittleEndian>()?);
-            let col_start = u24(r.read_u32::<LittleEndian>()?);
-            let col_count = u24(r.read_u32::<LittleEndian>()?);
+            let char_start = u24(r.read_u32::<LittleEndian>()?);
+            let char_count = u24(r.read_u32::<LittleEndian>()?);
 
             Ok(Self {
                 file_index,
                 line_start,
                 line_count,
-                col_start,
-                col_count,
+                char_start,
+                char_count,
             })
         }
 
@@ -290,8 +290,8 @@ pub mod properties {
             w.write_u32::<LittleEndian>(self.line_start.0)?;
             w.write_u32::<LittleEndian>(self.line_count.0)?;
 
-            w.write_u32::<LittleEndian>(self.col_start.0)?;
-            w.write_u32::<LittleEndian>(self.col_count.0)?;
+            w.write_u32::<LittleEndian>(self.char_start.0)?;
+            w.write_u32::<LittleEndian>(self.char_count.0)?;
 
             Ok(())
         }
