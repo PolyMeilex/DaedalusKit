@@ -1,4 +1,4 @@
-use lexer::{DaedalusLexer, Token};
+use daedalus_lexer::{DaedalusLexer, Token};
 use parser::{fmt::DaedalusFormatter, parse::File};
 use pretty_assertions::assert_eq;
 

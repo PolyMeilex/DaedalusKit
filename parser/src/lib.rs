@@ -1,8 +1,8 @@
 #![allow(clippy::single_match)]
 
-pub use lexer::DaedalusLexer;
+pub use daedalus_lexer::DaedalusLexer;
 pub mod fmt;
 pub mod parse;
 
-pub type ParseError = lexer::TokenError;
-pub type ParseErrorKind = lexer::TokenErrorKind;
+pub type ParseError = daedalus_lexer::TokenError;
+pub type ParseErrorKind = daedalus_lexer::TokenErrorKind;

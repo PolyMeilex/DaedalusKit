@@ -1,9 +1,7 @@
 use std::{path::Path, process::exit};
 
-use lexer::DaedalusLexer;
-use parser::fmt;
-
-pub type ParseError = lexer::TokenError;
+use daedalus_lexer::DaedalusLexer;
+use parser::{fmt, ParseError};
 
 fn main() {
     // let bytes = include_bytes!("../../DIA_bau_950_lobart.d");

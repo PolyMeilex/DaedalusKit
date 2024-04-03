@@ -1,10 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["bytecode", "compiler", "dat", "lexer", "output-units", "parser", "src-file"]
+members = ["bytecode", "compiler", "dat", "daedalus-lexer", "output-units", "parser", "src-file"]
 
 [workspace.dependencies]
 bytecode = { path = "./bytecode" }
-lexer = { path = "./lexer" }
+daedalus-lexer = { path = "./daedalus-lexer" }
 parser = { path = "./parser" }
 src-file = { path = "./src-file" }
 dat = { path = "./dat" }

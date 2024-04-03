@@ -2,7 +2,7 @@ use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
     ParseError,
 };
-use lexer::{DaedalusLexer, Token};
+use daedalus_lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
 use super::{Expr, Ident, Ty};

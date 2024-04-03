@@ -1,4 +1,4 @@
-use lexer::{DaedalusLexer, Token};
+use daedalus_lexer::{DaedalusLexer, Token};
 use std::fmt::Write;
 
 use crate::{
