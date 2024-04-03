@@ -232,7 +232,7 @@ pub mod properties {
     }
 
     #[repr(u32)]
-    #[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive)]
+    #[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive, PartialEq, Eq)]
     pub enum DataType {
         Void = 0,
         Float = 1,
@@ -285,6 +285,10 @@ pub mod properties {
                 char_start: u24::new(col_start),
                 char_count: u24::new(col_count),
             }
+        }
+
+        pub fn empty() -> Self {
+            Self::new(0, (0, 0), (0, 0))
         }
 
         pub fn decode(mut r: impl Read) -> std::io::Result<Self> {
@@ -341,8 +345,14 @@ pub mod properties {
         }
     }
 
-    #[derive(Default, Copy, Clone, PartialEq, Eq)]
+    #[derive(Default, Copy, Clone, Eq)]
     pub struct ElemProps(u32);
+
+    impl PartialEq for ElemProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.0 | Self::E == other.0 | Self::E
+        }
+    }
 
     impl ElemProps {
         const A: u32 = 0b00000000000000000000111111111111; // u12 |0
@@ -452,9 +462,15 @@ pub mod properties {
         }
     }
 
-    #[derive(Default, Copy, Clone, PartialEq, Eq)]
+    #[derive(Default, Copy, Clone, Eq)]
     #[allow(non_camel_case_types)]
     pub struct u19(u32);
+
+    impl PartialEq for u19 {
+        fn eq(&self, other: &Self) -> bool {
+            self.0 | 0xFFF80000 == other.0 | 0xFFF80000
+        }
+    }
 
     impl u19 {
         pub fn new(id: u32) -> Self {
@@ -482,9 +498,15 @@ pub mod properties {
         }
     }
 
-    #[derive(Default, Copy, Clone, PartialEq, Eq)]
+    #[derive(Default, Copy, Clone, Eq)]
     #[allow(non_camel_case_types)]
     pub struct u24(u32);
+
+    impl PartialEq for u24 {
+        fn eq(&self, other: &Self) -> bool {
+            self.0 | 0xFF000000 == other.0 | 0xFF000000
+        }
+    }
 
     impl u24 {
         pub fn new(id: u32) -> Self {
