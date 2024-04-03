@@ -1,6 +1,5 @@
 use bytecode::{Bytecode, Instruction};
 use byteorder::{LittleEndian, WriteBytesExt};
-use codespan::{FileId, Files};
 use dat::{
     properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
     Symbol, SymbolData, ZString,
@@ -8,6 +7,8 @@ use dat::{
 use std::{collections::HashMap, io::Cursor, str::FromStr};
 
 mod builtin;
+mod files;
+use files::{FileId, Files};
 
 #[derive(Debug)]
 struct DatBuilder {
@@ -280,7 +281,7 @@ impl DatBuilder {
                     default
                 },
             },
-            code_span: SymbolCodeSpan::empty(),
+            code_span: SymbolCodeSpan::empty(0),
             data: SymbolData::String(vec![ZString::from("HUMANS.MDS")]),
             parent: None,
         })
@@ -314,7 +315,7 @@ impl DatBuilder {
 }
 
 struct Compiler<'a> {
-    files: Files<&'a str>,
+    files: Files<'a>,
     classes: HashMap<String, u32>,
     instances: HashMap<String, u32>,
     externs: HashMap<String, u32>,
@@ -336,15 +337,19 @@ impl<'a> Compiler<'a> {
                         let ident = ZString::from(var.ident.raw.as_bytes());
                         let ty = DataType::from_str(var.ty.raw.as_str()).unwrap();
 
-                        (ident, ty, SymbolCodeSpan::empty())
+                        (ident, ty, SymbolCodeSpan::empty(file_id.raw()))
                     })
                     .collect();
 
                 let addr = builtin::get_address(&func.ident.raw).unwrap() as i32;
 
-                let id = self
-                    .dat
-                    .gen_extern_func(name, SymbolCodeSpan::empty(), &args, ty, addr);
+                let id = self.dat.gen_extern_func(
+                    name,
+                    SymbolCodeSpan::empty(file_id.raw()),
+                    &args,
+                    ty,
+                    addr,
+                );
                 self.externs.insert(func.ident.raw.to_uppercase(), id);
             }
 
@@ -356,7 +361,7 @@ impl<'a> Compiler<'a> {
                 let line_count = self.files.line_index(file_id, span.end as u32).0 - line_start;
 
                 let span = SymbolCodeSpan::new(
-                    0,
+                    file_id.raw(),
                     (line_start + 1, line_count + 1),
                     (span.start as u32, span.end as u32 - span.start as u32 + 2),
                 );
@@ -387,7 +392,7 @@ impl<'a> Compiler<'a> {
                             // Don't ask me why we add +3 to char_count of a span, we just do as
                             // that makes it compatible with zengin for some reason
                             SymbolCodeSpan::new(
-                                0,
+                                file_id.raw(),
                                 (line_start + 1, line_count + 1),
                                 (span.start as u32, span.end as u32 - span.start as u32 + 3),
                             )
@@ -400,8 +405,7 @@ impl<'a> Compiler<'a> {
                                 self.files.line_index(file_id, span.end as u32).0 - line_start;
 
                             SymbolCodeSpan::new(
-                                // Let's start from 1, so in contrast to zengin 0 is reserved for builtins
-                                0,
+                                file_id.raw(),
                                 (line_start + 1, line_count + 1),
                                 (span.start as u32, span.end as u32 - span.start as u32),
                             )
@@ -441,7 +445,7 @@ impl<'a> Compiler<'a> {
                 let line_count = self.files.line_index(file_id, span.end as u32).0 - line_start;
 
                 let span = SymbolCodeSpan::new(
-                    1,
+                    file_id.raw(),
                     (line_start + 1, line_count + 1),
                     (span.start as u32, span.end as u32 - span.start as u32 + 2),
                 );
@@ -480,7 +484,7 @@ impl<'a> Compiler<'a> {
                 let line_count = self.files.line_index(file_id, span.end as u32).0 - line_start;
 
                 let span = SymbolCodeSpan::new(
-                    1,
+                    file_id.raw(),
                     (line_start + 1, line_count + 1),
                     (span.start as u32, span.end as u32 - span.start as u32 + 2),
                 );
@@ -516,7 +520,7 @@ fn main() {
                 default
             },
         },
-        code_span: SymbolCodeSpan::empty(),
+        code_span: SymbolCodeSpan::empty(0),
         data: SymbolData::Address(0),
         parent: None,
     });

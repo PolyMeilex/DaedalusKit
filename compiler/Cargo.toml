@@ -13,6 +13,7 @@ dat.workspace = true
 parser.workspace = true
 
 codespan.workspace = true
+codespan-reporting.workspace = true
 bstr.workspace = true
 encoding_rs.workspace = true
 bitflags.workspace = true

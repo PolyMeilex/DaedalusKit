@@ -80,6 +80,7 @@ dependencies = [
  "bytecode",
  "byteorder",
  "codespan",
+ "codespan-reporting",
  "dat",
  "encoding_rs",
  "num-derive",

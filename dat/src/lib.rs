@@ -287,8 +287,8 @@ pub mod properties {
             }
         }
 
-        pub fn empty() -> Self {
-            Self::new(0, (0, 0), (0, 0))
+        pub fn empty(file_id: u32) -> Self {
+            Self::new(file_id, (0, 0), (0, 0))
         }
 
         pub fn decode(mut r: impl Read) -> std::io::Result<Self> {
