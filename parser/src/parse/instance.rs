@@ -3,6 +3,7 @@ use crate::{
     ParseError,
 };
 use lexer::{DaedalusLexer, Token};
+use logos::Span;
 use std::fmt::Write;
 
 use super::{Block, Ident};
@@ -12,6 +13,7 @@ pub struct Instance {
     pub ident: Ident,
     pub parent: Ident,
     pub block: Block,
+    pub span: Span,
 }
 
 impl DaedalusDisplay for Instance {
@@ -32,6 +34,7 @@ impl DaedalusDisplay for Instance {
 impl Instance {
     pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Instance)?;
+        let start = lexer.span().start;
 
         let ident = Ident::parse(lexer)?;
 
@@ -44,11 +47,13 @@ impl Instance {
         let block = Block::parse(lexer)?;
 
         lexer.eat_token(Token::Semi)?;
+        let end = lexer.span().end;
 
         Ok(Self {
             ident,
             parent,
             block,
+            span: start..end,
         })
     }
 }

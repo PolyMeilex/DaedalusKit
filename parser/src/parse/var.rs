@@ -3,6 +3,7 @@ use crate::{
     ParseError,
 };
 use lexer::{DaedalusLexer, Token};
+use logos::Span;
 use std::fmt::Write;
 
 use super::{Expr, Ident, Ty};
@@ -23,6 +24,7 @@ pub struct Var {
     pub ident: Ident,
     pub ty: Ty,
     pub kind: VarKind,
+    pub span: Span,
 }
 
 impl DaedalusDisplay for Var {
@@ -68,6 +70,7 @@ impl DaedalusDisplay for Var {
 impl Var {
     pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Var)?;
+        let start = lexer.span().start;
 
         let ty = Ty::parse(lexer)?;
         let ident = Ident::parse(lexer)?;
@@ -112,7 +115,13 @@ impl Var {
 
             VarKind::Value { init }
         };
+        let end = lexer.span().end;
 
-        Ok(Self { ident, ty, kind })
+        Ok(Self {
+            ident,
+            ty,
+            kind,
+            span: start..end,
+        })
     }
 }

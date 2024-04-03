@@ -3,6 +3,7 @@ use crate::{
     ParseError,
 };
 use lexer::{DaedalusLexer, Token};
+use logos::Span;
 use std::fmt::Write;
 
 use super::{Block, Ident, Ty, Var};
@@ -13,6 +14,7 @@ pub struct FunctionDefinition {
     pub ty: Ty,
     pub args: Vec<Var>,
     pub block: Block,
+    pub span: Span,
 }
 
 impl DaedalusDisplay for FunctionDefinition {
@@ -42,6 +44,7 @@ impl DaedalusDisplay for FunctionDefinition {
 impl FunctionDefinition {
     pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Func)?;
+        let start = lexer.span().start;
 
         let ty = Ty::parse(lexer)?;
         let ident = Ident::parse(lexer)?;
@@ -66,12 +69,14 @@ impl FunctionDefinition {
 
         let block = Block::parse(lexer)?;
         lexer.eat_token(Token::Semi)?;
+        let end = lexer.span().end;
 
         Ok(Self {
             ident,
             ty,
             args,
             block,
+            span: start..end,
         })
     }
 }
