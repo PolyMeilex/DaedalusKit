@@ -19,14 +19,17 @@ impl Bytecode {
         &self.bytecode
     }
 
+    pub fn next_available_address(&self) -> u32 {
+        self.bytecode.len() as u32
+    }
+
     pub fn block<'a>(&mut self, i: impl IntoIterator<Item = &'a Instruction>) -> u32 {
         self.block_builder().extend(i).done()
     }
 
     pub fn block_builder(&mut self) -> BytecodeBlockBuilder<'_> {
-        let addr = self.bytecode.len() as u32;
         BytecodeBlockBuilder {
-            addr,
+            addr: self.next_available_address(),
             bytecode: &mut self.bytecode,
         }
     }
