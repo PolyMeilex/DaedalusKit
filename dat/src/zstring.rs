@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use bstr::{BStr, BString, ByteSlice};
 use byteorder::{ReadBytesExt as _, WriteBytesExt as _};
 
-#[derive(Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ZString(pub BString);
 
 impl std::fmt::Display for ZString {
