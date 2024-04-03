@@ -1,5 +1,5 @@
 use daedalus_lexer::{DaedalusLexer, Token};
-use parser::{fmt::DaedalusFormatter, parse::File};
+use daedalus_parser::{fmt::DaedalusFormatter, File};
 use pretty_assertions::assert_eq;
 
 #[test]

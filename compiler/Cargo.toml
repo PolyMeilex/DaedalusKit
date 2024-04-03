@@ -10,7 +10,7 @@ code-span-compat = []
 [dependencies]
 bytecode.workspace = true
 dat.workspace = true
-parser.workspace = true
+daedalus-parser.workspace = true
 
 codespan.workspace = true
 codespan-reporting.workspace = true

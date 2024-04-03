@@ -81,11 +81,11 @@ dependencies = [
  "byteorder",
  "codespan",
  "codespan-reporting",
+ "daedalus-parser",
  "dat",
  "encoding_rs",
  "num-derive",
  "num-traits",
- "parser",
 ]
 
 [[package]]
@@ -93,6 +93,20 @@ name = "daedalus-lexer"
 version = "0.1.0"
 dependencies = [
  "logos",
+ "thiserror",
+]
+
+[[package]]
+name = "daedalus-parser"
+version = "0.1.0"
+dependencies = [
+ "codespan-reporting",
+ "daedalus-lexer",
+ "encoding_rs",
+ "indoc",
+ "logos",
+ "pretty_assertions",
+ "src-file",
  "thiserror",
 ]
 
@@ -240,20 +254,6 @@ dependencies = [
  "encoding_rs",
  "indexmap",
  "src-file",
-]
-
-[[package]]
-name = "parser"
-version = "0.1.0"
-dependencies = [
- "codespan-reporting",
- "daedalus-lexer",
- "encoding_rs",
- "indoc",
- "logos",
- "pretty_assertions",
- "src-file",
- "thiserror",
 ]
 
 [[package]]

@@ -1,5 +1,6 @@
 use bytecode::{Bytecode, Instruction};
 use byteorder::{LittleEndian, WriteBytesExt};
+use daedalus_parser::DaedalusLexer;
 use dat::{
     properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
     Symbol, SymbolData, ZString,
@@ -324,9 +325,9 @@ struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    pub fn handle_item(&mut self, file_id: FileId, item: &parser::parse::Item) {
+    pub fn handle_item(&mut self, file_id: FileId, item: &daedalus_parser::Item) {
         match item {
-            parser::parse::Item::ExternFunc(func) => {
+            daedalus_parser::Item::ExternFunc(func) => {
                 let name = ZString::from(func.ident.raw.as_bytes());
                 let ty = DataType::from_str(func.ty.raw.as_str()).unwrap();
 
@@ -353,7 +354,7 @@ impl<'a> Compiler<'a> {
                 self.externs.insert(func.ident.raw.to_uppercase(), id);
             }
 
-            parser::parse::Item::Class(class) => {
+            daedalus_parser::Item::Class(class) => {
                 let name = ZString::from(class.ident.raw.as_bytes());
                 let span = &class.span;
 
@@ -412,11 +413,11 @@ impl<'a> Compiler<'a> {
                         };
 
                         let count = match &var.kind {
-                            parser::parse::VarKind::Value { .. } => 1,
-                            parser::parse::VarKind::Array { size_init, .. } => {
+                            daedalus_parser::VarKind::Value { .. } => 1,
+                            daedalus_parser::VarKind::Array { size_init, .. } => {
                                 match &size_init.kind {
-                                    parser::parse::ExprKind::Lit(lit) => match &lit.kind {
-                                        parser::parse::LitKind::Intager(v) => {
+                                    daedalus_parser::ExprKind::Lit(lit) => match &lit.kind {
+                                        daedalus_parser::LitKind::Intager(v) => {
                                             let v: u32 = v.parse().expect("TODO");
                                             v
                                         }
@@ -435,7 +436,7 @@ impl<'a> Compiler<'a> {
                 self.classes.insert(class.ident.raw.to_uppercase(), id);
             }
 
-            parser::parse::Item::Instance(instance) => {
+            daedalus_parser::Item::Instance(instance) => {
                 let ident = ZString::from(instance.ident.raw.to_uppercase().as_bytes());
                 let parent = &instance.parent.raw.to_uppercase();
                 let parent = self.classes.get(parent).expect("TODO");
@@ -476,7 +477,7 @@ impl<'a> Compiler<'a> {
                     .done();
             }
 
-            parser::parse::Item::Func(func) => {
+            daedalus_parser::Item::Func(func) => {
                 let ident = ZString::from(func.ident.raw.to_uppercase().as_bytes());
                 let span = &func.span;
 
@@ -497,7 +498,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    pub fn handle_ast(&mut self, file_id: FileId, items: &[parser::parse::Item]) {
+    pub fn handle_ast(&mut self, file_id: FileId, items: &[daedalus_parser::Item]) {
         for item in items {
             self.handle_item(file_id, item);
         }
@@ -533,20 +534,17 @@ fn main() {
 
     let builtin = std::fs::read_to_string("./test_data/builtin-gothic.d").unwrap();
     let builtin_id = compiler.files.add("./test_data/builtin-gothic.d", &builtin);
-    let builtin_ast =
-        parser::parse::File::parse(&mut parser::DaedalusLexer::new(&builtin)).unwrap();
+    let builtin_ast = daedalus_parser::File::parse(&mut DaedalusLexer::new(&builtin)).unwrap();
     compiler.handle_ast(builtin_id, &builtin_ast.items);
 
     let classes = std::fs::read_to_string("./test_data/classes.d").unwrap();
     let classes_id = compiler.files.add("./test_data/classes.d", &classes);
-    let classes_ast =
-        parser::parse::File::parse(&mut parser::DaedalusLexer::new(&classes)).unwrap();
+    let classes_ast = daedalus_parser::File::parse(&mut DaedalusLexer::new(&classes)).unwrap();
     compiler.handle_ast(classes_id, &classes_ast.items);
 
     let startup = std::fs::read_to_string("./test_data/startup.d").unwrap();
     let startup_id = compiler.files.add("./test_data/startup.d", &startup);
-    let startup_ast =
-        parser::parse::File::parse(&mut parser::DaedalusLexer::new(&startup)).unwrap();
+    let startup_ast = daedalus_parser::File::parse(&mut DaedalusLexer::new(&startup)).unwrap();
     compiler.handle_ast(startup_id, &startup_ast.items);
 
     compiler.dat.generate_sort_table();

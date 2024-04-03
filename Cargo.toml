@@ -1,11 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["bytecode", "compiler", "dat", "daedalus-lexer", "output-units", "parser", "src-file"]
+members = ["bytecode", "compiler", "dat", "daedalus-lexer", "output-units", "daedalus-parser", "src-file"]
 
 [workspace.dependencies]
 bytecode = { path = "./bytecode" }
 daedalus-lexer = { path = "./daedalus-lexer" }
-parser = { path = "./parser" }
+daedalus-parser = { path = "./daedalus-parser" }
 src-file = { path = "./src-file" }
 dat = { path = "./dat" }
 # Off for now, until it is statically linkable
