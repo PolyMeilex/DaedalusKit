@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 mod zstring;
 pub use zstring::ZString;
 
-use crate::properties::DataType;
+use crate::properties::{DataType, PropFlag};
 
 #[derive(Debug, PartialEq)]
 pub struct Symbol {
@@ -533,4 +533,73 @@ pub mod properties {
             write!(f, "{}", self.get())
         }
     }
+}
+
+pub fn debug_print(dat: &DatFile) {
+    println!("version: {}", dat.version);
+    println!("count: {}", dat.symbols.len());
+    // println!("sorted: {:?}", dat.sort_indexes);
+
+    // Read symbols
+    for (sym_index, symbol) in dat.symbols.iter().enumerate() {
+        if let Some(name) = symbol.name.as_ref() {
+            println!("- {name}");
+        } else {
+            println!("- ?");
+        }
+
+        let props = &symbol.props;
+
+        println!("    index: {sym_index} 0x{sym_index:x?}");
+        println!("    type: {:?}", props.elem_props.data_type());
+        println!("    flags: {:?}", props.elem_props.flags());
+        if props.elem_props.flags().contains(PropFlag::RETURN) {
+            println!("    return: {:?}", props.elem_props);
+        }
+        if props.elem_props.flags().contains(PropFlag::RETURN) {
+            println!(
+                "    return: {:?}",
+                DataType::from_i32(props.off_cls_ret).unwrap()
+            );
+        }
+        if props.elem_props.flags().contains(PropFlag::CLASS_VAR) {
+            println!("    count: {:?}", props.elem_props.count());
+            println!("    offset: {:?}", props.off_cls_ret);
+        }
+
+        match &symbol.data {
+            SymbolData::Float(v) => {
+                for v in v {
+                    println!("    float: {v}");
+                }
+            }
+            SymbolData::Int(v) => {
+                for v in v {
+                    println!("    int: {v}");
+                }
+            }
+            SymbolData::String(v) => {
+                for v in v {
+                    println!("    string: {v:?}");
+                }
+            }
+            SymbolData::ClassOffset(v) => {
+                println!("    class_offset: {v} 0x{v:x?}");
+            }
+            SymbolData::Address(v) => {
+                println!("    address: {v} 0x{v:x?}");
+            }
+            SymbolData::None => {}
+        }
+
+        if let Some(v) = symbol.parent {
+            println!("    parent: {v}");
+        }
+    }
+
+    for i in dat.bytecode.instructions() {
+        println!("{i:?}");
+    }
+
+    println!();
 }
