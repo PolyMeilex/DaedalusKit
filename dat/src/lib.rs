@@ -244,6 +244,25 @@ pub mod properties {
         Instance = 7,
     }
 
+    impl std::str::FromStr for DataType {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            let ty = match s {
+                "void" => DataType::Void,
+                "float" => DataType::Float,
+                "int" => DataType::Int,
+                "string" => DataType::String,
+                "class" => DataType::Class,
+                "func" => DataType::Func,
+                "prototype" => DataType::Prototype,
+                "instance" => DataType::Instance,
+                _ => return Err(()),
+            };
+            Ok(ty)
+        }
+    }
+
     #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
     pub struct SymbolCodeSpan {
         pub file_index: u19,
