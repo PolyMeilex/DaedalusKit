@@ -72,7 +72,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "compiler"
+name = "daedalus-compiler"
 version = "0.1.0"
 dependencies = [
  "bitflags",
