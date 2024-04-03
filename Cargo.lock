@@ -84,7 +84,6 @@ dependencies = [
  "daedalus-parser",
  "dat-file",
  "encoding_rs",
- "indexmap",
  "num-derive",
  "num-traits",
 ]

@@ -8,9 +8,6 @@ default = ["code-span-compat"]
 code-span-compat = []
 
 [dependencies]
-# TODO: Remove - Not needed, but easier for debugging for now
-indexmap = "2.2.6"
-
 daedalus-bytecode.workspace = true
 dat-file.workspace = true
 daedalus-parser.workspace = true

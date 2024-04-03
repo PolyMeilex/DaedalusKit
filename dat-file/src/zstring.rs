@@ -1,4 +1,7 @@
-use std::io::{Read, Write};
+use std::{
+    borrow::Borrow,
+    io::{Read, Write},
+};
 
 use bstr::{BStr, BString, ByteSlice};
 use byteorder::{ReadBytesExt as _, WriteBytesExt as _};
@@ -22,6 +25,13 @@ impl std::fmt::Display for ZString {
 impl std::fmt::Debug for ZString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl Borrow<[u8]> for ZString {
+    #[inline]
+    fn borrow(&self) -> &[u8] {
+        self.0.as_bytes()
     }
 }
 

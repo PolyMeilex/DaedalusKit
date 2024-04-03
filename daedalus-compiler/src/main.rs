@@ -5,15 +5,14 @@ use dat_file::{
     properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
     DatFile, Symbol, SymbolData, ZString,
 };
-use indexmap::IndexMap;
-use std::{io::Cursor, str::FromStr};
+use std::{collections::HashMap, io::Cursor, str::FromStr};
 
 mod builtin;
 mod files;
 use files::{FileId, Files};
 
 struct Stage1 {
-    symbol_table: IndexMap<ZString, u32>,
+    symbol_table: HashMap<ZString, u32>,
 }
 
 impl Stage1 {
@@ -59,7 +58,7 @@ impl Stage1 {
     }
 
     pub fn run(files: &[(FileId, daedalus_parser::File)]) -> Stage2 {
-        let symbol_table = IndexMap::new();
+        let symbol_table = HashMap::new();
         let mut stage1 = Self { symbol_table };
 
         stage1.push_symbol(ZString::from(b"\xFFINSTANCE_HELP"));
@@ -74,7 +73,7 @@ impl Stage1 {
 }
 
 struct Stage2 {
-    symbol_table: IndexMap<ZString, u32>,
+    symbol_table: HashMap<ZString, u32>,
     dat: DatBuilder,
     todo_string_constants: Vec<Symbol>,
 }
@@ -217,10 +216,7 @@ impl Stage2 {
 
                 self.dat.gen_instance(ident, span, address, *parent);
 
-                let mdl_set_visual = self
-                    .symbol_table
-                    .get(&ZString::from(b"MDL_SETVISUAL")) // TODO
-                    .unwrap();
+                let mdl_set_visual = self.symbol_table.get(b"MDL_SETVISUAL".as_ref()).unwrap();
 
                 let file_name = (self.symbol_table.len() + self.todo_string_constants.len()) as u32;
                 self.todo_string_constants.push(Symbol {
@@ -241,13 +237,15 @@ impl Stage2 {
                     parent: None,
                 });
 
+                let npc_attributes = *self.symbol_table.get(b"C_NPC.ATTRIBUTE".as_ref()).unwrap();
+
                 self.dat
                     .bytecode
                     .block_builder()
                     // attribute[0] = 20
-                    // .var_assign_int((todo!(), 0), 20)
-                    // // attribute[1] = 40
-                    // .var_assign_int((todo!(), 1), 40)
+                    .var_assign_int((npc_attributes, 0), 20)
+                    // attribute[1] = 40
+                    .var_assign_int((npc_attributes, 1), 40)
                     // Mdl_SetVisual(self, "HUMANS.MDS")
                     .extend(&[
                         Instruction::push_var_instance(pc_hero),
