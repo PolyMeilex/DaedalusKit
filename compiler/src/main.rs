@@ -496,6 +496,12 @@ impl<'a> Compiler<'a> {
             got => todo!("Got: {got:?}"),
         }
     }
+
+    pub fn handle_ast(&mut self, file_id: FileId, items: &[parser::parse::Item]) {
+        for item in items {
+            self.handle_item(file_id, item);
+        }
+    }
 }
 
 fn main() {
@@ -526,36 +532,22 @@ fn main() {
     });
 
     let builtin = std::fs::read_to_string("./test_data/builtin-gothic.d").unwrap();
+    let builtin_id = compiler.files.add("./test_data/builtin-gothic.d", &builtin);
+    let builtin_ast =
+        parser::parse::File::parse(&mut parser::DaedalusLexer::new(&builtin)).unwrap();
+    compiler.handle_ast(builtin_id, &builtin_ast.items);
+
     let classes = std::fs::read_to_string("./test_data/classes.d").unwrap();
+    let classes_id = compiler.files.add("./test_data/classes.d", &classes);
+    let classes_ast =
+        parser::parse::File::parse(&mut parser::DaedalusLexer::new(&classes)).unwrap();
+    compiler.handle_ast(classes_id, &classes_ast.items);
+
     let startup = std::fs::read_to_string("./test_data/startup.d").unwrap();
-
-    {
-        let file_id = compiler.files.add("./test_data/classes.d", &builtin);
-        let builtin =
-            parser::parse::File::parse(&mut parser::DaedalusLexer::new(&builtin)).unwrap();
-        for item in builtin.items.iter() {
-            compiler.handle_item(file_id, item);
-        }
-    }
-
-    {
-        let file_id = compiler.files.add("./test_data/classes.d", &classes);
-        let classes =
-            parser::parse::File::parse(&mut parser::DaedalusLexer::new(&classes)).unwrap();
-        for item in classes.items.iter() {
-            compiler.handle_item(file_id, item);
-        }
-    }
-
-    {
-        let file_id = compiler.files.add("./test_data/startup.d", &startup);
-        let startup =
-            parser::parse::File::parse(&mut parser::DaedalusLexer::new(&startup)).unwrap();
-
-        for item in startup.items.iter() {
-            compiler.handle_item(file_id, item);
-        }
-    }
+    let startup_id = compiler.files.add("./test_data/startup.d", &startup);
+    let startup_ast =
+        parser::parse::File::parse(&mut parser::DaedalusLexer::new(&startup)).unwrap();
+    compiler.handle_ast(startup_id, &startup_ast.items);
 
     compiler.dat.generate_sort_table();
 
