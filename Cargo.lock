@@ -82,7 +82,7 @@ dependencies = [
  "codespan-reporting",
  "daedalus-bytecode",
  "daedalus-parser",
- "dat",
+ "dat-file",
  "encoding_rs",
  "num-derive",
  "num-traits",
@@ -111,7 +111,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dat"
+name = "dat-file"
 version = "0.1.0"
 dependencies = [
  "bitflags",

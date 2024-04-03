@@ -8,11 +8,11 @@ fn main() {
     let b = args.next().expect("Arg `b` not found");
 
     let data = std::fs::read(a).unwrap();
-    let dat_a = dat::DatFile::decode(&mut Cursor::new(data)).unwrap();
+    let dat_a = dat_file::DatFile::decode(&mut Cursor::new(data)).unwrap();
     // dat::debug_print(&dat);
 
     let data = std::fs::read(b).unwrap();
-    let dat_b = dat::DatFile::decode(&mut Cursor::new(data)).unwrap();
+    let dat_b = dat_file::DatFile::decode(&mut Cursor::new(data)).unwrap();
     // dat::debug_print(&dat2);
 
     assert_eq!(dat_a.symbols.len(), dat_b.symbols.len());

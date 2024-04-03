@@ -9,7 +9,7 @@ code-span-compat = []
 
 [dependencies]
 daedalus-bytecode.workspace = true
-dat.workspace = true
+dat-file.workspace = true
 daedalus-parser.workspace = true
 
 codespan.workspace = true

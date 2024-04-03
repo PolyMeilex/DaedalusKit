@@ -3,10 +3,10 @@ resolver = "2"
 members = [
   "daedalus-bytecode",
   "daedalus-compiler",
-  "dat",
   "daedalus-lexer",
-  "output-units",
   "daedalus-parser",
+  "dat-file",
+  "output-units",
   "src-file",
 ]
 
@@ -14,8 +14,8 @@ members = [
 daedalus-bytecode = { path = "./daedalus-bytecode" }
 daedalus-lexer = { path = "./daedalus-lexer" }
 daedalus-parser = { path = "./daedalus-parser" }
+dat-file = { path = "./dat-file" }
 src-file = { path = "./src-file" }
-dat = { path = "./dat" }
 # Off for now, until it is statically linkable
 # zenkit = { path = "./zenkit" }
 

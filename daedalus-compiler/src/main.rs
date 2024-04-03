@@ -1,9 +1,9 @@
-use daedalus_bytecode::{Bytecode, Instruction};
 use byteorder::{LittleEndian, WriteBytesExt};
+use daedalus_bytecode::{Bytecode, Instruction};
 use daedalus_parser::DaedalusLexer;
-use dat::{
+use dat_file::{
     properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
-    Symbol, SymbolData, ZString,
+    DatFile, Symbol, SymbolData, ZString,
 };
 use std::{collections::HashMap, io::Cursor, str::FromStr};
 
@@ -552,6 +552,6 @@ fn main() {
     let data = compiler.dat.build();
     std::fs::write("./OUT2.DAT", &data).unwrap();
 
-    let dat = dat::DatFile::decode(&mut Cursor::new(data)).unwrap();
-    dat::debug_print(&dat);
+    let dat = DatFile::decode(&mut Cursor::new(data)).unwrap();
+    dat_file::debug_print(&dat);
 }
