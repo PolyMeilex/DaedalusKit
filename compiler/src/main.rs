@@ -1,5 +1,6 @@
 use bytecode::{Bytecode, Instruction};
 use byteorder::{LittleEndian, WriteBytesExt};
+use codespan::{FileId, Files};
 use dat::{
     properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
     Symbol, SymbolData, ZString,
@@ -312,10 +313,197 @@ impl DatBuilder {
     }
 }
 
-fn main() {
-    let mut dat = DatBuilder::new();
+struct Compiler<'a> {
+    files: Files<&'a str>,
+    classes: HashMap<String, u32>,
+    instances: HashMap<String, u32>,
+    externs: HashMap<String, u32>,
 
-    dat.push_symbol(Symbol {
+    dat: DatBuilder,
+}
+
+impl<'a> Compiler<'a> {
+    pub fn handle_item(&mut self, file_id: FileId, item: &parser::parse::Item) {
+        match item {
+            parser::parse::Item::ExternFunc(func) => {
+                let name = ZString::from(func.ident.raw.as_bytes());
+                let ty = DataType::from_str(func.ty.raw.as_str()).unwrap();
+
+                let args: Vec<_> = func
+                    .args
+                    .iter()
+                    .map(|var| {
+                        let ident = ZString::from(var.ident.raw.as_bytes());
+                        let ty = DataType::from_str(var.ty.raw.as_str()).unwrap();
+
+                        (ident, ty, SymbolCodeSpan::empty())
+                    })
+                    .collect();
+
+                let addr = builtin::get_address(&func.ident.raw).unwrap() as i32;
+
+                let id = self
+                    .dat
+                    .gen_extern_func(name, SymbolCodeSpan::empty(), &args, ty, addr);
+                self.externs.insert(func.ident.raw.to_uppercase(), id);
+            }
+
+            parser::parse::Item::Class(class) => {
+                let name = ZString::from(class.ident.raw.as_bytes());
+                let span = &class.span;
+
+                let line_start = self.files.line_index(file_id, span.start as u32).0;
+                let line_count = self.files.line_index(file_id, span.end as u32).0 - line_start;
+
+                let span = SymbolCodeSpan::new(
+                    0,
+                    (line_start + 1, line_count + 1),
+                    (span.start as u32, span.end as u32 - span.start as u32 + 2),
+                );
+
+                let fields: Vec<_> = class
+                    .fields
+                    .iter()
+                    .map(|var| {
+                        let ident = ZString::from(var.ident.raw.as_bytes());
+                        let ty = DataType::from_str(var.ty.raw.as_str()).unwrap();
+
+                        // Codespans produced by Zengin are either hard for me to understand, or straight
+                        // up broken, so let's make compatibility with them an optional feature
+                        let span = if cfg!(feature = "code-span-compat") {
+                            let mut span = var.span.clone();
+
+                            let line_start = self.files.line_index(file_id, span.start as u32).0;
+                            let line_count =
+                                self.files.line_index(file_id, span.end as u32).0 - line_start;
+
+                            // Don't ask me why field span starts at the beginning of the line, this
+                            // is straight up broken, if 2 fields are on the same line, but that's
+                            // what zengine does...
+                            span.start =
+                                self.files.line_span(file_id, line_start).unwrap().start().0
+                                    as usize;
+
+                            // Don't ask me why we add +3 to char_count of a span, we just do as
+                            // that makes it compatible with zengin for some reason
+                            SymbolCodeSpan::new(
+                                0,
+                                (line_start + 1, line_count + 1),
+                                (span.start as u32, span.end as u32 - span.start as u32 + 3),
+                            )
+                        } else {
+                            // Path for sane spans without compatibility with zengin ones
+
+                            let span = &var.span;
+                            let line_start = self.files.line_index(file_id, span.start as u32).0;
+                            let line_count =
+                                self.files.line_index(file_id, span.end as u32).0 - line_start;
+
+                            SymbolCodeSpan::new(
+                                // Let's start from 1, so in contrast to zengin 0 is reserved for builtins
+                                0,
+                                (line_start + 1, line_count + 1),
+                                (span.start as u32, span.end as u32 - span.start as u32),
+                            )
+                        };
+
+                        let count = match &var.kind {
+                            parser::parse::VarKind::Value { .. } => 1,
+                            parser::parse::VarKind::Array { size_init, .. } => {
+                                match &size_init.kind {
+                                    parser::parse::ExprKind::Lit(lit) => match &lit.kind {
+                                        parser::parse::LitKind::Intager(v) => {
+                                            let v: u32 = v.parse().expect("TODO");
+                                            v
+                                        }
+                                        lit => todo!("unexpected: {lit:?}"),
+                                    },
+                                    _ => todo!(),
+                                }
+                            }
+                        };
+
+                        (ident, ty, count, span)
+                    })
+                    .collect();
+
+                let id = self.dat.gen_class(name, span, &fields, 800, 288);
+                self.classes.insert(class.ident.raw.to_uppercase(), id);
+            }
+
+            parser::parse::Item::Instance(instance) => {
+                let ident = ZString::from(instance.ident.raw.to_uppercase().as_bytes());
+                let parent = &instance.parent.raw.to_uppercase();
+                let parent = self.classes.get(parent).expect("TODO");
+                let span = &instance.span;
+
+                let line_start = self.files.line_index(file_id, span.start as u32).0;
+                let line_count = self.files.line_index(file_id, span.end as u32).0 - line_start;
+
+                let span = SymbolCodeSpan::new(
+                    1,
+                    (line_start + 1, line_count + 1),
+                    (span.start as u32, span.end as u32 - span.start as u32 + 2),
+                );
+
+                let address = self.dat.bytecode.next_available_address();
+                let pc_hero = self.dat.gen_instance(ident, span, address, *parent);
+
+                self.instances
+                    .insert(instance.ident.raw.to_uppercase(), pc_hero);
+
+                let mdl_set_visual = self.externs.get("MDL_SETVISUAL").unwrap();
+                let file_name = self.dat.gen_human_mds();
+
+                self.dat
+                    .bytecode
+                    .block_builder()
+                    // attribute[0] = 20
+                    // .var_assign_int((todo!(), 0), 20)
+                    // // attribute[1] = 40
+                    // .var_assign_int((todo!(), 1), 40)
+                    // Mdl_SetVisual(self, "HUMANS.MDS")
+                    .extend(&[
+                        Instruction::push_var_instance(pc_hero),
+                        Instruction::push_var(file_name),
+                        Instruction::call_extern(*mdl_set_visual),
+                    ])
+                    .ret()
+                    .done();
+            }
+
+            parser::parse::Item::Func(func) => {
+                let ident = ZString::from(func.ident.raw.to_uppercase().as_bytes());
+                let span = &func.span;
+
+                let line_start = self.files.line_index(file_id, span.start as u32).0;
+                let line_count = self.files.line_index(file_id, span.end as u32).0 - line_start;
+
+                let span = SymbolCodeSpan::new(
+                    1,
+                    (line_start + 1, line_count + 1),
+                    (span.start as u32, span.end as u32 - span.start as u32 + 2),
+                );
+
+                let address = self.dat.bytecode.block_builder().ret().done();
+
+                self.dat.gen_func(ident, span, &[], DataType::Void, address);
+            }
+            got => todo!("Got: {got:?}"),
+        }
+    }
+}
+
+fn main() {
+    let mut compiler = Compiler {
+        dat: DatBuilder::new(),
+        files: Files::new(),
+        classes: HashMap::new(),
+        instances: HashMap::new(),
+        externs: HashMap::new(),
+    };
+
+    compiler.dat.push_symbol(Symbol {
         name: Some(ZString::from(b"\xFFINSTANCE_HELP")),
         props: Properties {
             off_cls_ret: 0,
@@ -333,198 +521,41 @@ fn main() {
         parent: None,
     });
 
-    let mut externs = HashMap::new();
+    let builtin = std::fs::read_to_string("./test_data/builtin-gothic.d").unwrap();
+    let classes = std::fs::read_to_string("./test_data/classes.d").unwrap();
+    let startup = std::fs::read_to_string("./test_data/startup.d").unwrap();
+
     {
-        let builtin = std::fs::read_to_string("./test_data/builtin-gothic.d").unwrap();
+        let file_id = compiler.files.add("./test_data/classes.d", &builtin);
         let builtin =
             parser::parse::File::parse(&mut parser::DaedalusLexer::new(&builtin)).unwrap();
-        for item in builtin.items {
-            if let parser::parse::Item::ExternFunc(func) = item {
-                let name = ZString::from(func.ident.raw.as_bytes());
-                let ty = DataType::from_str(func.ty.raw.as_str()).unwrap();
-
-                let args: Vec<_> = func
-                    .args
-                    .into_iter()
-                    .map(|var| {
-                        let ident = ZString::from(var.ident.raw.as_bytes());
-                        let ty = DataType::from_str(var.ty.raw.as_str()).unwrap();
-
-                        (ident, ty, SymbolCodeSpan::empty())
-                    })
-                    .collect();
-
-                let addr = builtin::get_address(&func.ident.raw).unwrap() as i32;
-
-                let id = dat.gen_extern_func(name, SymbolCodeSpan::empty(), &args, ty, addr);
-                externs.insert(func.ident.raw.to_uppercase(), id);
-            }
+        for item in builtin.items.iter() {
+            compiler.handle_item(file_id, item);
         }
     }
 
-    let mut classes = HashMap::new();
-    let mut files = codespan::Files::<&str>::new();
-
-    let src = std::fs::read_to_string("./test_data/classes.d").unwrap();
     {
-        let file_id = files.add("./test_data/classes.d", &src);
-        let builtin = parser::parse::File::parse(&mut parser::DaedalusLexer::new(&src)).unwrap();
-        for item in builtin.items {
-            if let parser::parse::Item::Class(class) = item {
-                let name = ZString::from(class.ident.raw.as_bytes());
-                let span = class.span;
-
-                let line_start = files.line_index(file_id, span.start as u32).0;
-                let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
-
-                let span = SymbolCodeSpan::new(
-                    0,
-                    (line_start + 1, line_count + 1),
-                    (span.start as u32, span.end as u32 - span.start as u32 + 2),
-                );
-
-                let fields: Vec<_> = class
-                    .fields
-                    .into_iter()
-                    .map(|var| {
-                        let ident = ZString::from(var.ident.raw.as_bytes());
-                        let ty = DataType::from_str(var.ty.raw.as_str()).unwrap();
-
-                        // Codespans produced by Zengin are either hard for me to understand, or straight
-                        // up broken, so let's make compatibility with them an optional feature
-                        let span = if cfg!(feature = "code-span-compat") {
-                            let mut span = var.span;
-
-                            let line_start = files.line_index(file_id, span.start as u32).0;
-                            let line_count =
-                                files.line_index(file_id, span.end as u32).0 - line_start;
-
-                            // Don't ask me why field span starts at the beginning of the line, this
-                            // is straight up broken, if 2 fields are on the same line, but that's
-                            // what zengine does...
-                            span.start =
-                                files.line_span(file_id, line_start).unwrap().start().0 as usize;
-
-                            // Don't ask me why we add +3 to char_count of a span, we just do as
-                            // that makes it compatible with zengin for some reason
-                            SymbolCodeSpan::new(
-                                0,
-                                (line_start + 1, line_count + 1),
-                                (span.start as u32, span.end as u32 - span.start as u32 + 3),
-                            )
-                        } else {
-                            // Path for sane spans without compatibility with zengin ones
-
-                            let span = var.span;
-                            let line_start = files.line_index(file_id, span.start as u32).0;
-                            let line_count =
-                                files.line_index(file_id, span.end as u32).0 - line_start;
-
-                            SymbolCodeSpan::new(
-                                // Let's start from 1, so in contrast to zengin 0 is reserved for builtins
-                                0,
-                                (line_start + 1, line_count + 1),
-                                (span.start as u32, span.end as u32 - span.start as u32),
-                            )
-                        };
-
-                        let count = match var.kind {
-                            parser::parse::VarKind::Value { .. } => 1,
-                            parser::parse::VarKind::Array { size_init, .. } => {
-                                match size_init.kind {
-                                    parser::parse::ExprKind::Lit(lit) => match lit.kind {
-                                        parser::parse::LitKind::Intager(v) => {
-                                            let v: u32 = v.parse().expect("TODO");
-                                            v
-                                        }
-                                        lit => todo!("unexpected: {lit:?}"),
-                                    },
-                                    _ => todo!(),
-                                }
-                            }
-                        };
-
-                        (ident, ty, count, span)
-                    })
-                    .collect();
-
-                let id = dat.gen_class(name, span, &fields, 800, 288);
-                classes.insert(class.ident.raw.to_uppercase(), id);
-            }
+        let file_id = compiler.files.add("./test_data/classes.d", &classes);
+        let classes =
+            parser::parse::File::parse(&mut parser::DaedalusLexer::new(&classes)).unwrap();
+        for item in classes.items.iter() {
+            compiler.handle_item(file_id, item);
         }
     }
 
-    let src = std::fs::read_to_string("./test_data/startup.d").unwrap();
-    let mut instances = HashMap::new();
     {
-        let file_id = files.add("./test_data/startup.d", &src);
-        let builtin = parser::parse::File::parse(&mut parser::DaedalusLexer::new(&src)).unwrap();
+        let file_id = compiler.files.add("./test_data/startup.d", &startup);
+        let startup =
+            parser::parse::File::parse(&mut parser::DaedalusLexer::new(&startup)).unwrap();
 
-        for item in builtin.items {
-            match item {
-                parser::parse::Item::Instance(instance) => {
-                    let ident = ZString::from(instance.ident.raw.to_uppercase().as_bytes());
-                    let parent = &instance.parent.raw.to_uppercase();
-                    let parent = classes.get(parent).expect("TODO");
-                    let span = instance.span;
-
-                    let line_start = files.line_index(file_id, span.start as u32).0;
-                    let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
-
-                    let span = SymbolCodeSpan::new(
-                        1,
-                        (line_start + 1, line_count + 1),
-                        (span.start as u32, span.end as u32 - span.start as u32 + 2),
-                    );
-
-                    let address = dat.bytecode.next_available_address();
-                    let pc_hero = dat.gen_instance(ident, span, address, *parent);
-
-                    instances.insert(instance.ident.raw.to_uppercase(), pc_hero);
-
-                    let mdl_set_visual = externs.get("MDL_SETVISUAL").unwrap();
-                    let file_name = dat.gen_human_mds();
-
-                    dat.bytecode
-                        .block_builder()
-                        // attribute[0] = 20
-                        // .var_assign_int((todo!(), 0), 20)
-                        // // attribute[1] = 40
-                        // .var_assign_int((todo!(), 1), 40)
-                        // Mdl_SetVisual(self, "HUMANS.MDS")
-                        .extend(&[
-                            Instruction::push_var_instance(pc_hero),
-                            Instruction::push_var(file_name),
-                            Instruction::call_extern(*mdl_set_visual),
-                        ])
-                        .ret()
-                        .done();
-                }
-                parser::parse::Item::Func(func) => {
-                    let ident = ZString::from(func.ident.raw.to_uppercase().as_bytes());
-                    let span = func.span;
-
-                    let line_start = files.line_index(file_id, span.start as u32).0;
-                    let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
-
-                    let span = SymbolCodeSpan::new(
-                        1,
-                        (line_start + 1, line_count + 1),
-                        (span.start as u32, span.end as u32 - span.start as u32 + 2),
-                    );
-
-                    let address = dat.bytecode.block_builder().ret().done();
-
-                    dat.gen_func(ident, span, &[], DataType::Void, address);
-                }
-                got => todo!("Got: {got:?}"),
-            }
+        for item in startup.items.iter() {
+            compiler.handle_item(file_id, item);
         }
     }
 
-    dat.generate_sort_table();
+    compiler.dat.generate_sort_table();
 
-    let data = dat.build();
+    let data = compiler.dat.build();
     std::fs::write("./OUT2.DAT", &data).unwrap();
 
     let dat = dat::DatFile::decode(&mut Cursor::new(data)).unwrap();
