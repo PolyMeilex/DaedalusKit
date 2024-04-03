@@ -1,0 +1,23 @@
+use pretty_assertions::assert_eq;
+use std::io::Cursor;
+
+fn main() {
+    let mut args = std::env::args().skip(1);
+
+    let a = args.next().expect("Arg `a` not found");
+    let b = args.next().expect("Arg `b` not found");
+
+    let data = std::fs::read(a).unwrap();
+    let dat_a = dat::DatFile::decode(&mut Cursor::new(data)).unwrap();
+    // dat::debug_print(&dat);
+
+    let data = std::fs::read(b).unwrap();
+    let dat_b = dat::DatFile::decode(&mut Cursor::new(data)).unwrap();
+    // dat::debug_print(&dat2);
+
+    assert_eq!(dat_a.symbols.len(), dat_b.symbols.len());
+
+    for (a, b) in dat_a.symbols.iter().zip(dat_b.symbols.iter()) {
+        assert_eq!(a, b);
+    }
+}
