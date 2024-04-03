@@ -1,5 +1,5 @@
-use bytecode::Bytecode;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use daedalus_bytecode::Bytecode;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive as _;
 use properties::{Properties, SymbolCodeSpan};

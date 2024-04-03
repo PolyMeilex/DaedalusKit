@@ -32,15 +32,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bytecode"
-version = "0.1.0"
-dependencies = [
- "byteorder",
- "num-derive",
- "num-traits",
-]
-
-[[package]]
 name = "byteorder"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -72,15 +63,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "daedalus-bytecode"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "num-derive",
+ "num-traits",
+]
+
+[[package]]
 name = "daedalus-compiler"
 version = "0.1.0"
 dependencies = [
  "bitflags",
  "bstr",
- "bytecode",
  "byteorder",
  "codespan",
  "codespan-reporting",
+ "daedalus-bytecode",
  "daedalus-parser",
  "dat",
  "encoding_rs",
@@ -116,8 +116,8 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "bstr",
- "bytecode",
  "byteorder",
+ "daedalus-bytecode",
  "encoding_rs",
  "num-derive",
  "num-traits",

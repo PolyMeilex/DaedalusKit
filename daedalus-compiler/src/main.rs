@@ -1,4 +1,4 @@
-use bytecode::{Bytecode, Instruction};
+use daedalus_bytecode::{Bytecode, Instruction};
 use byteorder::{LittleEndian, WriteBytesExt};
 use daedalus_parser::DaedalusLexer;
 use dat::{

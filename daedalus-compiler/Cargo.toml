@@ -8,7 +8,7 @@ default = ["code-span-compat"]
 code-span-compat = []
 
 [dependencies]
-bytecode.workspace = true
+daedalus-bytecode.workspace = true
 dat.workspace = true
 daedalus-parser.workspace = true
 
