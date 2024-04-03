@@ -1,0 +1,21 @@
+[package]
+name = "compiler"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["code-span-compat"]
+code-span-compat = []
+
+[dependencies]
+bytecode.workspace = true
+dat.workspace = true
+parser.workspace = true
+
+codespan.workspace = true
+bstr.workspace = true
+encoding_rs.workspace = true
+bitflags.workspace = true
+byteorder.workspace = true
+num-derive.workspace = true
+num-traits.workspace = true

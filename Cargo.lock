@@ -53,6 +53,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "codespan"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3362992a0d9f1dd7c3d0e89e0ab2bb540b7a95fea8cd798090e758fda2899b5e"
+dependencies = [
+ "codespan-reporting",
+]
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -60,6 +69,22 @@ checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
+]
+
+[[package]]
+name = "compiler"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "bstr",
+ "bytecode",
+ "byteorder",
+ "codespan",
+ "dat",
+ "encoding_rs",
+ "num-derive",
+ "num-traits",
+ "parser",
 ]
 
 [[package]]
@@ -73,6 +98,7 @@ dependencies = [
  "encoding_rs",
  "num-derive",
  "num-traits",
+ "pretty_assertions",
 ]
 
 [[package]]
