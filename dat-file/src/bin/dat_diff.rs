@@ -9,11 +9,11 @@ fn main() {
 
     let data = std::fs::read(a).unwrap();
     let dat_a = dat_file::DatFile::decode(&mut Cursor::new(data)).unwrap();
-    // dat::debug_print(&dat);
+    // dat_file::debug_print(&dat_a);
 
     let data = std::fs::read(b).unwrap();
     let dat_b = dat_file::DatFile::decode(&mut Cursor::new(data)).unwrap();
-    // dat::debug_print(&dat2);
+    // dat_file::debug_print(&dat_b);
 
     assert_eq!(dat_a.symbols.len(), dat_b.symbols.len());
 
