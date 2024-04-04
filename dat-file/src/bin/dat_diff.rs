@@ -15,6 +15,7 @@ fn main() {
     let dat_b = dat_file::DatFile::decode(&mut Cursor::new(data)).unwrap();
     // dat_file::debug_print(&dat_b);
 
+    assert_eq!(dat_a.sort_indexes, dat_b.sort_indexes);
     assert_eq!(dat_a.symbols.len(), dat_b.symbols.len());
 
     for (a, b) in dat_a.symbols.iter().zip(dat_b.symbols.iter()) {
