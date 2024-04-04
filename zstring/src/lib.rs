@@ -3,10 +3,11 @@ use std::{
     io::{Read, Write},
 };
 
-use bstr::{BStr, BString, ByteSlice};
+use bstr::{BStr, BString};
 use byteorder::{ReadBytesExt as _, WriteBytesExt as _};
 
 pub use bstr;
+pub use bstr::{ByteSlice, ByteVec};
 
 #[derive(Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ZString(pub BString);
@@ -30,10 +31,31 @@ impl std::fmt::Debug for ZString {
     }
 }
 
+impl std::ops::Deref for ZString {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for ZString {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 impl Borrow<[u8]> for ZString {
     #[inline]
     fn borrow(&self) -> &[u8] {
         self.0.as_bytes()
+    }
+}
+
+impl Borrow<BStr> for ZString {
+    #[inline]
+    fn borrow(&self) -> &BStr {
+        self.0.as_bstr()
     }
 }
 
@@ -72,13 +94,23 @@ impl<'a> From<&'a str> for ZString {
     }
 }
 
+impl AsRef<[u8]> for ZString {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+}
+
+impl AsRef<BStr> for ZString {
+    #[inline]
+    fn as_ref(&self) -> &BStr {
+        self.0.as_bstr()
+    }
+}
+
 impl ZString {
     pub fn as_bstr(&self) -> &BStr {
         self.0.as_bstr()
-    }
-
-    pub fn as_bytes(&self) -> &[u8] {
-        self.0.as_bytes()
     }
 
     pub fn len(&self) -> usize {

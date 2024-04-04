@@ -5,7 +5,7 @@ use dat_file::{
     properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
     Symbol, SymbolData, 
 };
-use zstring::ZString;
+use zstring::{ZString, ByteVec};
 
 use crate::symbol_indices::SymbolIndices;
 
@@ -86,8 +86,8 @@ impl DatSymbolTable {
 
         for (ident, arg, span) in args.iter() {
             let mut name = name.clone();
-            name.0.push(b'.');
-            name.0.extend(ident.as_bytes());
+            name.0.push_char('.');
+            name.0.push_str(ident);
 
             self.push_symbol(Symbol {
                 name: Some(name),
@@ -153,8 +153,8 @@ impl DatSymbolTable {
 
         for (ident, arg, span) in args.iter() {
             let mut name = name.clone();
-            name.0.push(b'.');
-            name.0.extend(ident.as_bytes());
+            name.0.push_char('.');
+            name.0.push_str(ident);
 
             self.push_symbol(Symbol {
                 name: Some(name),
@@ -216,8 +216,8 @@ impl DatSymbolTable {
         let mut address = address;
         for (ident, data_type, count, span) in fields.iter() {
             let mut name = name.clone();
-            name.0.push(b'.');
-            name.0.extend(ident.as_bytes());
+            name.0.push_char('.');
+            name.0.push_str(ident);
 
             self.push_symbol(Symbol {
                 name: Some(name),
