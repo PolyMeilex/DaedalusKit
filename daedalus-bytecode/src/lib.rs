@@ -117,7 +117,7 @@ impl<'a> BytecodeBlockBuilder<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Instruction {
     pub opcode: Opcode,
     pub data: InstructionData,
@@ -232,7 +232,7 @@ impl Instruction {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InstructionData {
     Address(u32),
     Immediate(i32),
@@ -242,7 +242,7 @@ pub enum InstructionData {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive)]
+#[derive(Debug, Clone, Copy, FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum Opcode {
     /// Add `a` and `b` and put the result back onto the stack.
     Add = 0,

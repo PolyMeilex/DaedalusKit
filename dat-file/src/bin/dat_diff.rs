@@ -20,4 +20,17 @@ fn main() {
     for (a, b) in dat_a.symbols.iter().zip(dat_b.symbols.iter()) {
         assert_eq!(a, b);
     }
+
+    assert_eq!(
+        dat_a.bytecode.as_bytes().len(),
+        dat_b.bytecode.as_bytes().len()
+    );
+
+    for (a, b) in dat_a
+        .bytecode
+        .instructions()
+        .zip(dat_b.bytecode.instructions())
+    {
+        assert_eq!(a, b);
+    }
 }
