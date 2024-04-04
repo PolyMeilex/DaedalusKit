@@ -224,6 +224,13 @@ impl Instruction {
         }
     }
 
+    pub fn negate() -> Self {
+        Self {
+            opcode: Opcode::Negate,
+            data: InstructionData::None,
+        }
+    }
+
     pub fn ret() -> Self {
         Self {
             opcode: Opcode::Return,
