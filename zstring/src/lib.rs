@@ -6,6 +6,8 @@ use std::{
 use bstr::{BStr, BString, ByteSlice};
 use byteorder::{ReadBytesExt as _, WriteBytesExt as _};
 
+pub use bstr;
+
 #[derive(Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ZString(pub BString);
 

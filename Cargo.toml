@@ -8,6 +8,7 @@ members = [
   "dat-file",
   "output-units",
   "src-file",
+  "zstring",
 ]
 
 [workspace.dependencies]
@@ -16,6 +17,7 @@ daedalus-lexer = { path = "./daedalus-lexer" }
 daedalus-parser = { path = "./daedalus-parser" }
 dat-file = { path = "./dat-file" }
 src-file = { path = "./src-file" }
+zstring = { path = "./zstring" }
 # Off for now, until it is statically linkable
 # zenkit = { path = "./zenkit" }
 

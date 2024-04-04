@@ -1,5 +1,5 @@
-use dat_file::ZString;
 use std::collections::HashMap;
+use zstring::ZString;
 
 use crate::files::FileId;
 

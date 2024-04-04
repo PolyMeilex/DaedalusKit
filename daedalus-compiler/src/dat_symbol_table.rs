@@ -3,8 +3,9 @@ use std::io::Write;
 use byteorder::{LittleEndian, WriteBytesExt};
 use dat_file::{
     properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
-    Symbol, SymbolData, ZString,
+    Symbol, SymbolData, 
 };
+use zstring::ZString;
 
 use crate::symbol_indices::SymbolIndices;
 

@@ -2,9 +2,10 @@ use daedalus_bytecode::{Bytecode, Instruction};
 use daedalus_parser::DaedalusLexer;
 use dat_file::{
     properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
-    DatFile, Symbol, SymbolData, ZString,
+    DatFile, Symbol, SymbolData,
 };
 use std::{io::Cursor, str::FromStr};
+use zstring::ZString;
 
 mod builtin;
 

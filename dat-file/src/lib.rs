@@ -4,9 +4,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive as _;
 use properties::{Properties, SymbolCodeSpan};
 use std::io::{Read, Write};
-
-mod zstring;
-pub use zstring::ZString;
+use zstring::ZString;
 
 use crate::properties::{DataType, PropFlag};
 

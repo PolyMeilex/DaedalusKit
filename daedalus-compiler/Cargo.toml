@@ -11,10 +11,10 @@ code-span-compat = []
 daedalus-bytecode.workspace = true
 dat-file.workspace = true
 daedalus-parser.workspace = true
+zstring.workspace = true
 
 codespan.workspace = true
 codespan-reporting.workspace = true
-bstr.workspace = true
 encoding_rs.workspace = true
 bitflags.workspace = true
 byteorder.workspace = true
