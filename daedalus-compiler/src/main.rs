@@ -18,6 +18,8 @@ use symbol_indices::SymbolIndices;
 mod files;
 use files::{FileId, Files};
 
+mod const_eval;
+
 struct Compiler {
     symbol_indices: SymbolIndices,
     symbol_table: DatSymbolTable,

@@ -83,8 +83,11 @@ dependencies = [
  "daedalus-parser",
  "dat-file",
  "encoding_rs",
+ "indoc",
  "num-derive",
  "num-traits",
+ "pretty_assertions",
+ "src-file",
  "zstring",
 ]
 

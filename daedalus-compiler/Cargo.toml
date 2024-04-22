@@ -12,6 +12,7 @@ daedalus-bytecode.workspace = true
 dat-file.workspace = true
 daedalus-parser.workspace = true
 zstring.workspace = true
+src-file.workspace = true
 
 codespan.workspace = true
 codespan-reporting.workspace = true
@@ -20,3 +21,7 @@ bitflags.workspace = true
 byteorder.workspace = true
 num-derive.workspace = true
 num-traits.workspace = true
+
+[dev-dependencies]
+indoc = "2"
+pretty_assertions = "1.4.0"

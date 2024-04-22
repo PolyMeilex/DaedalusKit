@@ -34,8 +34,6 @@ pub enum AssocOp {
     Or,
     /// `|`
     BitOr,
-    /// `!`
-    Not,
     /// '*'
     Multiply,
     /// '/'
@@ -71,7 +69,6 @@ impl AssocOp {
             Self::BitAnd => "&",
             Self::Or => "||",
             Self::BitOr => "|",
-            Self::Not => "!",
             Self::Multiply => "*",
             Self::Divide => "/",
             Self::ShiftLeft => "<<",
