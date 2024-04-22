@@ -34,7 +34,7 @@ mod class;
 pub use class::Class;
 
 mod expr;
-pub use expr::{Expr, ExprKind, Lit, LitKind};
+pub use expr::{AssocOp, Expr, ExprKind, Lit, LitKind, UnaryOp};
 
 mod ty;
 pub use ty::Ty;
