@@ -9,13 +9,8 @@ use super::{Expr, Ident, Ty};
 
 #[derive(Debug)]
 pub enum ConstKind {
-    Value {
-        init: Option<Expr>,
-    },
-    Array {
-        size_init: Expr,
-        init: Option<Vec<Expr>>,
-    },
+    Value { init: Expr },
+    Array { size_init: Expr, init: Vec<Expr> },
 }
 
 #[derive(Debug)]
@@ -35,7 +30,7 @@ impl DaedalusDisplay for Const {
         self.ident.fmt(f)?;
 
         match &self.kind {
-            ConstKind::Value { init: Some(init) } => {
+            ConstKind::Value { init } => {
                 write!(f, " = ")?;
                 init.fmt(f)?;
             }
@@ -44,21 +39,18 @@ impl DaedalusDisplay for Const {
                 size_init.fmt(f)?;
                 write!(f, "]")?;
 
-                if let Some(init) = init {
-                    write!(f, " = {{")?;
+                write!(f, " = {{")?;
 
-                    let mut iter = init.iter().peekable();
-                    while let Some(expr) = iter.next() {
-                        expr.fmt(f)?;
-                        if iter.peek().is_some() {
-                            write!(f, ", ")?;
-                        }
+                let mut iter = init.iter().peekable();
+                while let Some(expr) = iter.next() {
+                    expr.fmt(f)?;
+                    if iter.peek().is_some() {
+                        write!(f, ", ")?;
                     }
-
-                    write!(f, "}}")?;
                 }
+
+                write!(f, "}}")?;
             }
-            _ => {}
         }
 
         Ok(())
@@ -77,12 +69,12 @@ impl Const {
             let size_init = Expr::parse(lexer)?;
             lexer.eat_token(Token::CloseBracket)?;
 
-            let init = if lexer.peek()? == Token::Eq {
-                lexer.eat_token(Token::Eq)?;
-                lexer.eat_token(Token::OpenBrace)?;
+            lexer.eat_token(Token::Eq)?;
 
+            let init = {
                 let mut inits = Vec::new();
 
+                lexer.eat_token(Token::OpenBrace)?;
                 loop {
                     let init = Expr::parse(lexer)?;
                     inits.push(init);
@@ -96,21 +88,16 @@ impl Const {
                     }
                 }
 
-                Some(inits)
-            } else {
-                None
+                inits
             };
 
             ConstKind::Array { size_init, init }
         } else {
-            let init = if lexer.peek()? == Token::Eq {
-                lexer.eat_token(Token::Eq)?;
-                Some(Expr::parse(lexer)?)
-            } else {
-                None
-            };
+            lexer.eat_token(Token::Eq)?;
 
-            ConstKind::Value { init }
+            ConstKind::Value {
+                init: Expr::parse(lexer)?,
+            }
         };
 
         Ok(Self { ident, ty, kind })
