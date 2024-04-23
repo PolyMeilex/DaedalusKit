@@ -172,6 +172,29 @@ impl AssocOp {
 
         Ok(Some(res))
     }
+
+    fn priority(&self) -> u32 {
+        match self {
+            AssocOp::Multiply | AssocOp::Divide => 10,
+            AssocOp::Add | AssocOp::Subtract => 9,
+            AssocOp::ShiftLeft | AssocOp::ShiftRight => 8,
+
+            AssocOp::Less | AssocOp::LessEqual | AssocOp::Greater | AssocOp::GreaterEqual => 7,
+            AssocOp::Equal | AssocOp::NotEqual => 6,
+
+            AssocOp::BitAnd => 5,
+            AssocOp::BitOr => 4,
+
+            AssocOp::And => 3,
+            AssocOp::Or => 2,
+
+            AssocOp::Assign
+            | AssocOp::AddAssign
+            | AssocOp::SubtractAssign
+            | AssocOp::MultiplyAssign
+            | AssocOp::DivideAssign => 1,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -278,23 +301,34 @@ impl Expr {
         lexer.eat_whitespace();
 
         let left = Self::parse_without_op(lexer)?;
-        let expr = Self::parse_with_op(lexer, left)?;
+        let expr = Self::parse_with_op(lexer, left, 0)?;
 
         Ok(expr)
     }
 
-    fn parse_with_op(lexer: &mut DaedalusLexer, left: Self) -> Result<Self, ParseError> {
-        if let Some(op) = AssocOp::parse_op(lexer)? {
-            let right = Self::parse_without_op(lexer)?;
+    fn parse_with_op(
+        lexer: &mut DaedalusLexer,
+        mut left: Self,
+        left_priority: u32,
+    ) -> Result<Self, ParseError> {
+        while let Some(op) = AssocOp::parse_op(&mut lexer.clone())? {
+            let priority = op.priority();
 
-            let next_left = Self {
-                kind: ExprKind::Binary(op, Box::new(left), Box::new(right)),
+            if priority < left_priority {
+                break;
             };
 
-            Self::parse_with_op(lexer, next_left)
-        } else {
-            Ok(left)
+            AssocOp::parse_op(lexer)?;
+
+            let right = Self::parse_without_op(lexer)?;
+            let res = Self::parse_with_op(lexer, right, priority + 1)?;
+
+            left = Self {
+                kind: ExprKind::Binary(op, Box::new(left), Box::new(res)),
+            };
         }
+
+        Ok(left)
     }
 
     fn parse_without_op(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
@@ -415,5 +449,23 @@ impl Expr {
         Ok(Expr {
             kind: ExprKind::Field(Box::new(parent_expr), ident),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use daedalus_lexer::DaedalusLexer;
+    use indoc::indoc;
+
+    #[test]
+    #[ignore]
+    fn assoc_op() {
+        let src = indoc! {"
+        1 + 2 * 3 + 4
+        "};
+
+        let expr = Expr::parse(&mut DaedalusLexer::new(src)).unwrap();
+        dbg!(expr);
     }
 }
