@@ -4,6 +4,12 @@ use std::ffi::{OsStr, OsString};
 
 use codespan::{ByteIndex, LineIndex, Location};
 use codespan_reporting::files::Error;
+use daedalus_parser::DaedalusLexer;
+
+pub struct File {
+    pub id: FileId,
+    pub ast: daedalus_parser::File,
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FileId {
@@ -33,12 +39,20 @@ impl<'a> Files<'a> {
         Self::default()
     }
 
-    pub fn add(&mut self, name: impl Into<OsString>, source: &'a str) -> FileId {
+    pub fn parse(
+        &mut self,
+        name: impl Into<OsString>,
+        source: &'a str,
+    ) -> daedalus_parser::Result<File> {
         self.len += 1;
-        FileId {
+        let id = FileId {
             inner: self.inner.add(name, source),
             id: self.len as u32 - 1,
-        }
+        };
+
+        let ast = daedalus_parser::File::parse(&mut DaedalusLexer::new(source))?;
+
+        Ok(File { id, ast })
     }
 
     /// Get the name of the source file.

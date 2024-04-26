@@ -1,5 +1,4 @@
 use daedalus_bytecode::{Bytecode, Instruction};
-use daedalus_parser::DaedalusLexer;
 use dat_file::{
     properties::{DataType, SymbolCodeSpan},
     DatFile,
@@ -17,6 +16,8 @@ use symbol_indices::SymbolIndices;
 
 mod files;
 use files::{FileId, Files};
+
+use crate::files::File;
 
 mod const_eval;
 
@@ -226,12 +227,8 @@ impl Compiler {
         }
     }
 
-    pub fn build(
-        mut self,
-        files: &[(FileId, daedalus_parser::File)],
-        span_files: &Files,
-    ) -> Vec<u8> {
-        for (id, ast) in files.iter() {
+    pub fn build(mut self, files: &[File], span_files: &Files) -> Vec<u8> {
+        for File { id, ast } in files.iter() {
             for item in ast.items.iter() {
                 self.handle_item(span_files, *id, item);
             }
@@ -258,14 +255,10 @@ fn main() {
     let files = [builtin, classes, startup];
     let files: Vec<_> = files
         .iter()
-        .map(|(path, src)| {
-            let id = files_store.add(path, src);
-            let ast = daedalus_parser::File::parse(&mut DaedalusLexer::new(src)).unwrap();
-            (id, ast)
-        })
+        .map(|(path, src)| files_store.parse(path, src).unwrap())
         .collect();
 
-    let symbol_map = SymbolIndices::build(files.iter().map(|(_, f)| f));
+    let symbol_map = SymbolIndices::build(&files);
     let out = Compiler::new(symbol_map).build(&files, &files_store);
 
     std::fs::write("./OUT2.DAT", &out).unwrap();

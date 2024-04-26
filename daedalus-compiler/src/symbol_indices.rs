@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use zstring::ZString;
 
+use crate::files::File;
+
 pub struct SymbolIndices(HashMap<ZString, u32>);
 
 impl std::ops::Deref for SymbolIndices {
@@ -63,12 +65,12 @@ impl SymbolIndices {
         }
     }
 
-    pub fn build<'a>(files: impl IntoIterator<Item = &'a daedalus_parser::File>) -> Self {
+    pub fn build<'a>(files: impl IntoIterator<Item = &'a File>) -> Self {
         let mut symbol_map = Self(HashMap::new());
 
         symbol_map.push_symbol(ZString::from(b"\xFFINSTANCE_HELP"));
-        for ast in files {
-            for item in ast.items.iter() {
+        for file in files {
+            for item in file.ast.items.iter() {
                 symbol_map.handle_item(item);
             }
         }

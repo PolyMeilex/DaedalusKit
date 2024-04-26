@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use daedalus_parser::{Expr, ExprKind, LitKind};
 
-use crate::symbol_indices::SymbolIndices;
+use crate::{files::File, symbol_indices::SymbolIndices};
 
 #[derive(Debug)]
 enum Value {
@@ -21,14 +21,14 @@ struct ConstsMap<'a> {
 }
 
 impl<'a> ConstsMap<'a> {
-    fn visit_files(&mut self, files: impl IntoIterator<Item = &'a daedalus_parser::File>) {
+    fn visit_files(&mut self, files: impl IntoIterator<Item = &'a File>) {
         for file in files {
             self.visit_file(file);
         }
     }
 
-    fn visit_file(&mut self, file: &'a daedalus_parser::File) {
-        for item in file.items.iter() {
+    fn visit_file(&mut self, file: &'a File) {
+        for item in file.ast.items.iter() {
             self.visit_item(item);
         }
     }
@@ -46,17 +46,14 @@ pub struct ConstEvaluator<'a> {
 }
 
 impl<'a> ConstEvaluator<'a> {
-    pub fn build(
-        indices: &'a SymbolIndices,
-        files: impl IntoIterator<Item = &'a daedalus_parser::File> + Clone,
-    ) {
+    pub fn build(indices: &'a SymbolIndices, files: impl IntoIterator<Item = &'a File> + Clone) {
         let mut map = ConstsMap::default();
         map.visit_files(files.clone());
 
         let mut this = Self { indices, map };
 
         for file in files {
-            for item in file.items.iter() {
+            for item in file.ast.items.iter() {
                 if let daedalus_parser::Item::Const(item) = item {
                     let value = this.visit_const(item);
                     println!("{} = {:?}", item.ident.raw, value);
@@ -146,6 +143,7 @@ impl<'a> ConstEvaluator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::files::Files;
     use indoc::indoc;
 
     #[test]
@@ -155,9 +153,8 @@ mod tests {
         const int CBA = ABC + 1;
         "};
 
-        let file =
-            daedalus_parser::File::parse(&mut daedalus_parser::DaedalusLexer::new(src)).unwrap();
-
+        let mut files_store = Files::new();
+        let file = files_store.parse("abc.d", src).unwrap();
         let files = [file];
 
         let indices = SymbolIndices::build(&files);
