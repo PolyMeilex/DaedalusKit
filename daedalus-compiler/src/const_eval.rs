@@ -7,7 +7,7 @@ use daedalus_parser::{Expr, ExprKind, LitKind};
 use crate::{files::File, symbol_indices::SymbolIndices};
 
 #[derive(Debug)]
-enum Value {
+pub enum Value {
     Int(i32),
     Float(f32),
     String(String),
@@ -15,12 +15,13 @@ enum Value {
     Symbol(u32),
 }
 
+/// Const nodes in the tree
 #[derive(Default)]
-struct ConstsMap<'a> {
+struct ConstNodes<'a> {
     map: HashMap<&'a str, &'a daedalus_parser::Const>,
 }
 
-impl<'a> ConstsMap<'a> {
+impl<'a> ConstNodes<'a> {
     fn visit_files(&mut self, files: impl IntoIterator<Item = &'a File>) {
         for file in files {
             self.visit_file(file);
@@ -40,28 +41,40 @@ impl<'a> ConstsMap<'a> {
     }
 }
 
-pub struct ConstEvaluator<'a> {
-    map: ConstsMap<'a>,
+pub struct ConstValues {
+    pub map: HashMap<String, Value>,
+}
+
+impl ConstValues {
+    pub fn build<'a>(
+        files: impl IntoIterator<Item = &'a File> + Clone,
+        indices: &'a SymbolIndices,
+    ) -> Self {
+        let mut map = ConstNodes::default();
+        map.visit_files(files.clone());
+
+        let mut eval = ConstEvaluator { indices, map };
+
+        let mut map = HashMap::new();
+        for file in files {
+            for item in file.ast.items.iter() {
+                if let daedalus_parser::Item::Const(item) = item {
+                    let value = eval.visit_const(item);
+                    map.insert(item.ident.raw.to_uppercase(), value);
+                }
+            }
+        }
+
+        Self { map }
+    }
+}
+
+struct ConstEvaluator<'a> {
+    map: ConstNodes<'a>,
     indices: &'a SymbolIndices,
 }
 
 impl<'a> ConstEvaluator<'a> {
-    pub fn build(indices: &'a SymbolIndices, files: impl IntoIterator<Item = &'a File> + Clone) {
-        let mut map = ConstsMap::default();
-        map.visit_files(files.clone());
-
-        let mut this = Self { indices, map };
-
-        for file in files {
-            for item in file.ast.items.iter() {
-                if let daedalus_parser::Item::Const(item) = item {
-                    let value = this.visit_const(item);
-                    println!("{} = {:?}", item.ident.raw, value);
-                }
-            }
-        }
-    }
-
     fn visit_const(&mut self, item: &daedalus_parser::Const) -> Value {
         match &item.kind {
             daedalus_parser::ConstKind::Value { init } => self.visit_expr(init),
@@ -122,7 +135,6 @@ impl<'a> ConstEvaluator<'a> {
             },
             ExprKind::Call(_) => todo!(),
             ExprKind::Ident(ident) => {
-                dbg!(&ident);
                 if let Some(ref_item) = self.map.map.get(ident.raw.to_uppercase().as_str()) {
                     self.visit_const(ref_item)
                 } else if let Some(symbol) =
@@ -159,6 +171,6 @@ mod tests {
 
         let indices = SymbolIndices::build(&files);
 
-        ConstEvaluator::build(&indices, &files);
+        ConstValues::build(&files, &indices);
     }
 }

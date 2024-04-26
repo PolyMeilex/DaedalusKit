@@ -1,4 +1,6 @@
+use const_eval::Value;
 use daedalus_bytecode::{Bytecode, Instruction};
+use daedalus_parser::{ExprKind, LitKind};
 use dat_file::{
     properties::{DataType, SymbolCodeSpan},
     DatFile,
@@ -17,21 +19,23 @@ use symbol_indices::SymbolIndices;
 mod files;
 use files::{FileId, Files};
 
-use crate::files::File;
+use crate::{const_eval::ConstValues, files::File};
 
 mod const_eval;
 
 struct Compiler {
     symbol_indices: SymbolIndices,
+    const_values: ConstValues,
     symbol_table: DatSymbolTable,
     bytecode: Bytecode,
 }
 
 impl Compiler {
-    pub fn new(symbol_indices: SymbolIndices) -> Self {
+    pub fn new(symbol_indices: SymbolIndices, const_values: ConstValues) -> Self {
         Self {
             symbol_table: DatSymbolTable::new(&symbol_indices),
             symbol_indices,
+            const_values,
             bytecode: Bytecode::new(),
         }
     }
@@ -39,7 +43,7 @@ impl Compiler {
     fn handle_item(&mut self, files: &Files, file_id: FileId, item: &daedalus_parser::Item) {
         match item {
             daedalus_parser::Item::ExternFunc(func) => {
-                let name = ZString::from(func.ident.raw.as_bytes());
+                let name = ZString::from(func.ident.raw.as_bytes().to_ascii_uppercase());
                 let ty = DataType::from_str(func.ty.raw.as_str()).unwrap();
 
                 let args: Vec<_> = func
@@ -65,7 +69,7 @@ impl Compiler {
             }
 
             daedalus_parser::Item::Class(class) => {
-                let name = ZString::from(class.ident.raw.as_bytes());
+                let name = ZString::from(class.ident.raw.as_bytes().to_ascii_uppercase());
                 let span = &class.span;
 
                 let line_start = files.line_index(file_id, span.start as u32).0;
@@ -81,7 +85,7 @@ impl Compiler {
                     .fields
                     .iter()
                     .map(|var| {
-                        let ident = ZString::from(var.ident.raw.as_bytes());
+                        let ident = ZString::from(var.ident.raw.as_bytes().to_ascii_uppercase());
                         let ty = DataType::from_str(var.ty.raw.as_str()).unwrap();
 
                         // Codespans produced by Zengin are either hard for me to understand, or straight
@@ -125,13 +129,26 @@ impl Compiler {
                             daedalus_parser::VarKind::Value { .. } => 1,
                             daedalus_parser::VarKind::Array { size_init, .. } => {
                                 match &size_init.kind {
-                                    daedalus_parser::ExprKind::Lit(lit) => match &lit.kind {
-                                        daedalus_parser::LitKind::Intager(v) => {
+                                    ExprKind::Lit(lit) => match &lit.kind {
+                                        LitKind::Intager(v) => {
                                             let v: u32 = v.parse().expect("TODO");
                                             v
                                         }
                                         lit => todo!("unexpected: {lit:?}"),
                                     },
+                                    ExprKind::Ident(ident) => {
+                                        let value = self
+                                            .const_values
+                                            .map
+                                            .get(&ident.raw.to_uppercase())
+                                            .expect("TODO");
+
+                                        if let Value::Int(v) = value {
+                                            *v as u32
+                                        } else {
+                                            todo!()
+                                        }
+                                    }
                                     _ => todo!(),
                                 }
                             }
@@ -223,6 +240,7 @@ impl Compiler {
                 self.symbol_table
                     .func(ident, span, &[], DataType::Void, address);
             }
+            daedalus_parser::Item::Const(_item) => {}
             got => todo!("Got: {got:?}"),
         }
     }
@@ -241,7 +259,37 @@ impl Compiler {
     }
 }
 
+// fn abc() {
+//     let mut files_store = Files::new();
+//
+//     let base_path = "./test_data/G2MDK-PolishScripts/Content/";
+//     let src = src_file::load(format!("{base_path}Gothic.src"));
+//
+//     let file_sources: Vec<(&std::path::Path, String)> = src
+//         .iter()
+//         .map(|path| {
+//             let bytes = std::fs::read(path).unwrap();
+//             let path = path.strip_prefix(base_path).unwrap();
+//
+//             let (src, _, _) = encoding_rs::WINDOWS_1250.decode(&bytes);
+//             (path, src.into())
+//         })
+//         .collect();
+//
+//     let files: Vec<_> = file_sources
+//         .iter()
+//         .map(|(path, src)| files_store.parse(path, src).unwrap())
+//         .collect();
+//
+//     let time = std::time::Instant::now();
+//     let symbol_indices = SymbolIndices::build(&files);
+//
+//     const_eval::ConstValues::build(&symbol_indices, &files);
+//     dbg!(time.elapsed().as_millis());
+// }
+
 fn main() {
+    // abc();
     let mut files_store = Files::new();
 
     fn read_file(path: &str) -> (&str, String) {
@@ -259,7 +307,8 @@ fn main() {
         .collect();
 
     let symbol_map = SymbolIndices::build(&files);
-    let out = Compiler::new(symbol_map).build(&files, &files_store);
+    let const_values = ConstValues::build(&files, &symbol_map);
+    let out = Compiler::new(symbol_map, const_values).build(&files, &files_store);
 
     std::fs::write("./OUT2.DAT", &out).unwrap();
 

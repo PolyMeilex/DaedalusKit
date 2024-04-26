@@ -27,7 +27,7 @@ impl SymbolIndices {
                 for var in item.args.iter() {
                     let mut arg = ident.clone();
                     arg.0.push(b'.');
-                    arg.0.extend(var.ident.raw.as_bytes());
+                    arg.0.extend(var.ident.raw.as_bytes().to_ascii_uppercase());
                     self.push_symbol(arg);
                 }
             }
@@ -38,7 +38,7 @@ impl SymbolIndices {
                 for var in item.fields.iter() {
                     let mut arg = ident.clone();
                     arg.0.push(b'.');
-                    arg.0.extend(var.ident.raw.as_bytes());
+                    arg.0.extend(var.ident.raw.as_bytes().to_ascii_uppercase());
                     self.push_symbol(arg);
                 }
             }
