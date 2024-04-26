@@ -1,8 +1,8 @@
 use daedalus_bytecode::{Bytecode, Instruction};
 use daedalus_parser::DaedalusLexer;
 use dat_file::{
-    properties::{DataType, ElemProps, PropFlag, Properties, SymbolCodeSpan},
-    DatFile, Symbol, SymbolData,
+    properties::{DataType, SymbolCodeSpan},
+    DatFile,
 };
 use std::{io::Cursor, str::FromStr};
 use zstring::ZString;
@@ -231,24 +231,6 @@ impl Compiler {
         files: &[(FileId, daedalus_parser::File)],
         span_files: &Files,
     ) -> Vec<u8> {
-        self.symbol_table.push_symbol(Symbol {
-            name: Some(ZString::from(b"\xFFINSTANCE_HELP")),
-            props: Properties {
-                off_cls_ret: 0,
-                elem_props: {
-                    let mut default = ElemProps::default();
-                    default.set_count(1);
-                    default.set_data_type(DataType::Instance);
-                    default.set_flags(PropFlag::empty());
-                    default.set_space(1);
-                    default
-                },
-            },
-            code_span: SymbolCodeSpan::empty(0),
-            data: SymbolData::Address(0),
-            parent: None,
-        });
-
         for (id, ast) in files.iter() {
             for item in ast.items.iter() {
                 self.handle_item(span_files, *id, item);
@@ -283,7 +265,7 @@ fn main() {
         })
         .collect();
 
-    let symbol_map = SymbolIndices::build(&files);
+    let symbol_map = SymbolIndices::build(files.iter().map(|(_, f)| f));
     let out = Compiler::new(symbol_map).build(&files, &files_store);
 
     std::fs::write("./OUT2.DAT", &out).unwrap();

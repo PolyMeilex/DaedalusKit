@@ -4,11 +4,15 @@ use std::collections::HashMap;
 
 use daedalus_parser::{Expr, ExprKind, LitKind};
 
+use crate::symbol_indices::SymbolIndices;
+
 #[derive(Debug)]
 enum Value {
     Int(i32),
     Float(f32),
     String(String),
+    Array(Vec<Value>),
+    Symbol(u32),
 }
 
 #[derive(Default)]
@@ -17,7 +21,7 @@ struct ConstsMap<'a> {
 }
 
 impl<'a> ConstsMap<'a> {
-    fn visit_files(&mut self, files: &'a [daedalus_parser::File]) {
+    fn visit_files(&mut self, files: impl IntoIterator<Item = &'a daedalus_parser::File>) {
         for file in files {
             self.visit_file(file);
         }
@@ -36,40 +40,47 @@ impl<'a> ConstsMap<'a> {
     }
 }
 
-#[derive(Default)]
-pub struct ConstEvaluator {}
+pub struct ConstEvaluator<'a> {
+    map: ConstsMap<'a>,
+    indices: &'a SymbolIndices,
+}
 
-impl ConstEvaluator {
-    pub fn visit_files(&mut self, files: &[daedalus_parser::File]) {
+impl<'a> ConstEvaluator<'a> {
+    pub fn build(
+        indices: &'a SymbolIndices,
+        files: impl IntoIterator<Item = &'a daedalus_parser::File> + Clone,
+    ) {
         let mut map = ConstsMap::default();
-        map.visit_files(files);
-        dbg!(map.map.len());
+        map.visit_files(files.clone());
+
+        let mut this = Self { indices, map };
 
         for file in files {
             for item in file.items.iter() {
                 if let daedalus_parser::Item::Const(item) = item {
-                    let value = self.visit_const(&map, item);
+                    let value = this.visit_const(item);
                     println!("{} = {:?}", item.ident.raw, value);
                 }
             }
         }
     }
 
-    fn visit_const(&mut self, map: &ConstsMap, item: &daedalus_parser::Const) -> Value {
+    fn visit_const(&mut self, item: &daedalus_parser::Const) -> Value {
         match &item.kind {
-            daedalus_parser::ConstKind::Value { init } => self.visit_expr(map, init),
-            daedalus_parser::ConstKind::Array {
-                size_init: _,
-                init: _,
-            } => todo!(),
+            daedalus_parser::ConstKind::Value { init } => self.visit_expr(init),
+            daedalus_parser::ConstKind::Array { size_init: _, init } => {
+                let values: Vec<_> = init.iter().map(|expr| self.visit_expr(expr)).collect();
+                // todo!("{}[{}] = {:?}", item.ident.raw, values.len(), values)
+                Value::Array(values)
+            }
         }
     }
 
-    fn visit_expr(&mut self, map: &ConstsMap, expr: &Expr) -> Value {
+    fn visit_expr(&mut self, expr: &Expr) -> Value {
         match &expr.kind {
             ExprKind::Binary(op, left, right) => {
-                let left = self.visit_expr(map, left);
-                let right = self.visit_expr(map, right);
+                let left = self.visit_expr(left);
+                let right = self.visit_expr(right);
 
                 let (left, right) = match (left, right) {
                     (Value::Int(l), Value::Int(r)) => (l, r),
@@ -114,8 +125,16 @@ impl ConstEvaluator {
             },
             ExprKind::Call(_) => todo!(),
             ExprKind::Ident(ident) => {
-                let ref_item = map.map.get(ident.raw.as_str()).expect("TODO");
-                self.visit_const(map, ref_item)
+                dbg!(&ident);
+                if let Some(ref_item) = self.map.map.get(ident.raw.to_uppercase().as_str()) {
+                    self.visit_const(ref_item)
+                } else if let Some(symbol) =
+                    self.indices.get(ident.raw.to_ascii_uppercase().as_bytes())
+                {
+                    Value::Symbol(*symbol)
+                } else {
+                    todo!()
+                }
             }
             ExprKind::Paren(_) => todo!(),
             ExprKind::Field(_, _) => todo!(),
@@ -139,7 +158,10 @@ mod tests {
         let file =
             daedalus_parser::File::parse(&mut daedalus_parser::DaedalusLexer::new(src)).unwrap();
 
-        let mut expr = ConstEvaluator::default();
-        expr.visit_files(&[file]);
+        let files = [file];
+
+        let indices = SymbolIndices::build(&files);
+
+        ConstEvaluator::build(&indices, &files);
     }
 }
