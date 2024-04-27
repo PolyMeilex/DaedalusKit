@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use daedalus_parser::{Expr, ExprKind, LitKind};
+use daedalus_parser::{Expr, ExprKind, LitKind, UnaryOp};
 
 use crate::{files::File, symbol_indices::SymbolIndices};
 
@@ -121,7 +121,18 @@ impl<'a> ConstEvaluator<'a> {
                     daedalus_parser::AssocOp::DivideAssign => todo!(),
                 }
             }
-            ExprKind::Unary(_op, _expr) => todo!(),
+            ExprKind::Unary(op, expr) => {
+                let value = self.visit_expr(expr);
+                let Value::Int(value) = value else { todo!() };
+
+                Value::Int(match op {
+                    UnaryOp::Not => match value {
+                        0 => 1,
+                        _ => 0,
+                    },
+                    UnaryOp::Negative => -value,
+                })
+            }
             ExprKind::Lit(lit) => match &lit.kind {
                 LitKind::Intager(v) => Value::Int(*v),
                 LitKind::Float(v) => Value::Float(*v),
