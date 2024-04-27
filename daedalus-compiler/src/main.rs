@@ -163,8 +163,10 @@ impl Compiler {
 
             daedalus_parser::Item::Instance(instance) => {
                 let ident = ZString::from(instance.ident.raw.as_bytes().to_ascii_uppercase());
-                let parent = ZString::from(instance.parent.raw.as_bytes().to_ascii_uppercase());
-                let parent = self.symbol_indices.get(&parent).expect("TODO");
+                let parent = self
+                    .symbol_indices
+                    .get(&instance.parent.raw.to_uppercase())
+                    .expect("TODO");
                 let span = &instance.span;
 
                 let line_start = files.line_index(file_id, span.start as u32).0;
@@ -183,15 +185,9 @@ impl Compiler {
                 let hum_body_naked0 = self.symbol_table.string(ZString::from("hum_body_Naked0"));
                 let hum_head_pony = self.symbol_table.string(ZString::from("Hum_Head_Pony"));
 
-                let npc_attributes = *self
-                    .symbol_indices
-                    .get(b"C_NPC.ATTRIBUTE".as_ref())
-                    .unwrap();
-                let mdl_set_visual = *self.symbol_indices.get(b"MDL_SETVISUAL".as_ref()).unwrap();
-                let mdl_set_visual_body = *self
-                    .symbol_indices
-                    .get(b"MDL_SETVISUALBODY".as_ref())
-                    .unwrap();
+                let npc_attributes = *self.symbol_indices.get("C_NPC.ATTRIBUTE").unwrap();
+                let mdl_set_visual = *self.symbol_indices.get("MDL_SETVISUAL").unwrap();
+                let mdl_set_visual_body = *self.symbol_indices.get("MDL_SETVISUALBODY").unwrap();
 
                 self.bytecode
                     .block_builder()
@@ -240,7 +236,28 @@ impl Compiler {
                 self.symbol_table
                     .func(ident, span, &[], DataType::Void, address);
             }
-            daedalus_parser::Item::Const(_item) => {}
+            daedalus_parser::Item::Const(item) => {
+                let name = ZString::from(item.ident.raw.as_bytes().to_ascii_uppercase());
+
+                let span = &item.span;
+
+                let line_start = files.line_index(file_id, span.start as u32).0;
+                let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
+
+                let span = SymbolCodeSpan::new(
+                    file_id.raw(),
+                    (line_start + 1, line_count + 1),
+                    (span.start as u32, span.end as u32 - span.start as u32 + 3),
+                );
+
+                let value = self
+                    .const_values
+                    .map
+                    .get(&item.ident.raw.to_uppercase())
+                    .expect("TODO");
+
+                self.symbol_table.const_item(name, span, value);
+            }
             got => todo!("Got: {got:?}"),
         }
     }

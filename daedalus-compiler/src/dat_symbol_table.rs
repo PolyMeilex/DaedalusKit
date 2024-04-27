@@ -7,7 +7,7 @@ use dat_file::{
 };
 use zstring::{ByteVec, ZString};
 
-use crate::symbol_indices::SymbolIndices;
+use crate::{const_eval, symbol_indices::SymbolIndices};
 
 #[derive(Debug)]
 pub struct DatSymbolTable {
@@ -273,6 +273,37 @@ impl DatSymbolTable {
         }
 
         class_symbol
+    }
+
+    pub fn const_item(
+        &mut self,
+        name: ZString,
+        code_span: SymbolCodeSpan,
+        data: &const_eval::Value,
+    ) -> u32 {
+        self.push_symbol(Symbol {
+            name: Some(name),
+            props: Properties {
+                off_cls_ret: 0,
+                elem_props: {
+                    let mut default = ElemProps::default();
+                    default.set_count(1);
+                    default.set_data_type(DataType::Int);
+                    default.set_flags(PropFlag::CONST);
+                    default.set_space(1);
+                    default
+                },
+            },
+            code_span,
+            data: match data {
+                const_eval::Value::Int(v) => SymbolData::Int(vec![*v]),
+                const_eval::Value::Float(v) => SymbolData::Float(vec![*v]),
+                const_eval::Value::String(_) => todo!(),
+                const_eval::Value::Array(_) => todo!(),
+                const_eval::Value::Symbol(_) => todo!(),
+            },
+            parent: None,
+        })
     }
 
     pub fn instance(

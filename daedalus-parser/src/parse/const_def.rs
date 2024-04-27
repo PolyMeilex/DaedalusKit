@@ -3,6 +3,7 @@ use crate::{
     ParseError,
 };
 use daedalus_lexer::{DaedalusLexer, Token};
+use logos::Span;
 use std::fmt::Write;
 
 use super::{Expr, Ident, Ty};
@@ -18,6 +19,7 @@ pub struct Const {
     pub ident: Ident,
     pub ty: Ty,
     pub kind: ConstKind,
+    pub span: Span,
 }
 
 impl DaedalusDisplay for Const {
@@ -60,6 +62,7 @@ impl DaedalusDisplay for Const {
 impl Const {
     pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
         lexer.eat_token(Token::Const)?;
+        let start = lexer.span().start;
 
         let ty = Ty::parse(lexer)?;
         let ident = Ident::parse(lexer)?;
@@ -100,6 +103,13 @@ impl Const {
             }
         };
 
-        Ok(Self { ident, ty, kind })
+        let end = lexer.span().end;
+
+        Ok(Self {
+            ident,
+            ty,
+            kind,
+            span: start..end,
+        })
     }
 }
