@@ -134,10 +134,7 @@ impl Compiler {
                             daedalus_parser::VarKind::Array { size_init, .. } => {
                                 match &size_init.kind {
                                     ExprKind::Lit(lit) => match &lit.kind {
-                                        LitKind::Intager(v) => {
-                                            let v: u32 = v.parse().expect("TODO");
-                                            v
-                                        }
+                                        LitKind::Intager(v) => u32::try_from(*v).expect("TODO"),
                                         lit => todo!("unexpected: {lit:?}"),
                                     },
                                     ExprKind::Ident(ident) => {
@@ -224,18 +221,17 @@ impl Compiler {
                         let symbol = format!("{}.{symbol}", self.parent);
 
                         let ExprKind::Lit(id) = &id.kind else { todo!() };
-                        let LitKind::Intager(id) = &id.kind else {
+                        let LitKind::Intager(id) = id.kind else {
                             todo!()
                         };
-                        let id: u8 = id.parse().expect("TODO");
+                        let id = u8::try_from(id).expect("TODO");
 
                         let ExprKind::Lit(value) = &right.kind else {
                             todo!()
                         };
-                        let LitKind::Intager(value) = &value.kind else {
+                        let LitKind::Intager(value) = value.kind else {
                             todo!()
                         };
-                        let value: i32 = value.parse().expect("TODO");
 
                         // "C_NPC.ATTRIBUTE"
                         let npc_attributes = self.symbol_indices.get(&symbol).unwrap().id;
@@ -267,14 +263,12 @@ impl Compiler {
                             }
                             ExprKind::Lit(lit) => match &lit.kind {
                                 LitKind::Intager(v) => {
-                                    let v: i32 = v.parse().unwrap();
                                     self.block.push_instruction(Instruction::push_int(v.abs()));
                                     if v.is_negative() {
                                         self.block.push_instruction(Instruction::negate());
                                     }
                                 }
                                 LitKind::Float(v) => {
-                                    let v: f32 = v.parse().unwrap();
                                     // Well that's fun, it turns out floats were ints all along
                                     let v = v.to_le_bytes();
                                     let v = i32::from_le_bytes(v);

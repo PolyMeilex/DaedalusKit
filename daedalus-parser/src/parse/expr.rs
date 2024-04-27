@@ -1,5 +1,5 @@
-use daedalus_lexer::{DaedalusLexer, Token};
-use std::fmt::Write;
+use daedalus_lexer::{DaedalusLexer, Token, TokenError};
+use std::{backtrace::Backtrace, fmt::Write};
 
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
@@ -207,8 +207,8 @@ pub enum UnaryOp {
 
 #[derive(Debug)]
 pub enum LitKind {
-    Intager(String),
-    Float(String),
+    Intager(i32),
+    Float(f32),
     String(String),
 }
 
@@ -358,17 +358,29 @@ impl Expr {
             }
             Token::Integer => {
                 let raw = lexer.eat_token(Token::Integer)?;
+                let value = raw.parse::<i32>().map_err(|err| ParseError::IntLitError {
+                    err,
+                    span: lexer.span(),
+                    backtrace: Backtrace::capture(),
+                })?;
                 Expr {
                     kind: ExprKind::Lit(Lit {
-                        kind: LitKind::Intager(raw.to_string()),
+                        kind: LitKind::Intager(value),
                     }),
                 }
             }
             Token::Float => {
                 let raw = lexer.eat_token(Token::Float)?;
+                let value = raw
+                    .parse::<f32>()
+                    .map_err(|err| ParseError::FloatLitError {
+                        err,
+                        span: lexer.span(),
+                        backtrace: Backtrace::capture(),
+                    })?;
                 Expr {
                     kind: ExprKind::Lit(Lit {
-                        kind: LitKind::Float(raw.to_string()),
+                        kind: LitKind::Float(value),
                     }),
                 }
             }
@@ -402,7 +414,7 @@ impl Expr {
             }
             got => {
                 peek_lexer.eat_any()?;
-                return Err(ParseError::unexpeced_token(got, peek_lexer.span()));
+                return Err(TokenError::unexpeced_token(got, peek_lexer.span()).into());
             }
         };
 

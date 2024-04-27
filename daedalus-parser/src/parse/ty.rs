@@ -1,4 +1,4 @@
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::{DaedalusLexer, Token, TokenError};
 use std::fmt::Write;
 
 use crate::{
@@ -41,7 +41,7 @@ impl Ty {
             }
             got => {
                 lexer.eat_any()?;
-                Err(ParseError::unexpeced_token(got, lexer.span()))
+                Err(TokenError::unexpeced_token(got, lexer.span()).into())
             }
         }
     }

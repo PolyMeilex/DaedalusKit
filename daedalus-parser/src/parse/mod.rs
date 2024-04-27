@@ -1,4 +1,4 @@
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::{DaedalusLexer, Token, TokenError};
 
 mod instance;
 pub use instance::Instance;
@@ -133,7 +133,7 @@ impl File {
                 }
                 got => {
                     lexer.eat_any()?;
-                    return Err(ParseError::unexpeced_token(got, lexer.span()));
+                    return Err(TokenError::unexpeced_token(got, lexer.span()).into());
                 }
             }
         }

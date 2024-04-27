@@ -2,7 +2,7 @@ use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
     ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::{DaedalusLexer, Token, TokenError};
 use std::fmt::Write;
 
 use super::{Expr, IfStatement, ReturnStatement, Var};
@@ -94,7 +94,7 @@ impl Block {
                 }
                 got => {
                     lexer.eat_any()?;
-                    return Err(ParseError::unexpeced_token(got, lexer.span()));
+                    return Err(TokenError::unexpeced_token(got, lexer.span()).into());
                 }
             }
         }

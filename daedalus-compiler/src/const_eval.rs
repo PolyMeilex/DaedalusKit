@@ -123,14 +123,8 @@ impl<'a> ConstEvaluator<'a> {
             }
             ExprKind::Unary(_op, _expr) => todo!(),
             ExprKind::Lit(lit) => match &lit.kind {
-                LitKind::Intager(v) => {
-                    let v: i32 = v.parse().expect("TODO");
-                    Value::Int(v)
-                }
-                LitKind::Float(v) => {
-                    let v: f32 = v.parse().expect("TODO");
-                    Value::Float(v)
-                }
+                LitKind::Intager(v) => Value::Int(*v),
+                LitKind::Float(v) => Value::Float(*v),
                 LitKind::String(v) => Value::String(v.clone()),
             },
             ExprKind::Call(_) => todo!(),
