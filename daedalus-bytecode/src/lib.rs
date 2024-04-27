@@ -24,7 +24,9 @@ impl Bytecode {
     }
 
     pub fn block<'a>(&mut self, i: impl IntoIterator<Item = &'a Instruction>) -> u32 {
-        self.block_builder().extend(i).done()
+        let mut block = self.block_builder();
+        block.extend(i);
+        block.addr()
     }
 
     pub fn block_builder(&mut self) -> BytecodeBlockBuilder<'_> {
@@ -73,24 +75,24 @@ impl<'a> BytecodeBlockBuilder<'a> {
         i.encode(&mut self.bytecode).unwrap();
     }
 
-    pub fn push_instruction(mut self, instruction: Instruction) -> Self {
+    pub fn push_instruction(&mut self, instruction: Instruction) -> &mut Self {
         self.encode(&instruction);
         self
     }
 
-    pub fn extend<'b>(mut self, i: impl IntoIterator<Item = &'b Instruction>) -> Self {
+    pub fn extend<'b>(&mut self, i: impl IntoIterator<Item = &'b Instruction>) -> &mut Self {
         for i in i {
             self.encode(i);
         }
         self
     }
 
-    pub fn ret(mut self) -> Self {
+    pub fn ret(&mut self) -> &mut Self {
         self.encode(&Instruction::ret());
         self
     }
 
-    pub fn var_assign_int(mut self, (array_symbol, id): (u32, u8), value: u32) -> Self {
+    pub fn var_assign_int(&mut self, (array_symbol, id): (u32, u8), value: i32) -> &mut Self {
         self.encode(&Instruction::push_int(value));
         if id == 0 {
             self.encode(&Instruction::push_var(array_symbol));
@@ -101,7 +103,7 @@ impl<'a> BytecodeBlockBuilder<'a> {
         self
     }
 
-    pub fn instance_assign_int(mut self, (array_symbol, id): (u32, u8), value: u32) -> Self {
+    pub fn instance_assign_int(&mut self, (array_symbol, id): (u32, u8), value: i32) -> &mut Self {
         self.encode(&Instruction::push_int(value));
         if id == 0 {
             self.encode(&Instruction::push_var(array_symbol));
@@ -112,7 +114,7 @@ impl<'a> BytecodeBlockBuilder<'a> {
         self
     }
 
-    pub fn done(self) -> u32 {
+    pub fn addr(&self) -> u32 {
         self.addr
     }
 }
@@ -182,10 +184,10 @@ impl Instruction {
         std::mem::size_of::<u8>() + data_size
     }
 
-    pub fn push_int(immediate: u32) -> Self {
+    pub fn push_int(immediate: i32) -> Self {
         Self {
             opcode: Opcode::PushInt,
-            data: InstructionData::Immediate(immediate as i32),
+            data: InstructionData::Immediate(immediate),
         }
     }
 
@@ -220,6 +222,13 @@ impl Instruction {
     pub fn call_extern(symbol: u32) -> Self {
         Self {
             opcode: Opcode::CallExtern,
+            data: InstructionData::Symbol(symbol),
+        }
+    }
+
+    pub fn call(symbol: u32) -> Self {
+        Self {
+            opcode: Opcode::Call,
             data: InstructionData::Symbol(symbol),
         }
     }

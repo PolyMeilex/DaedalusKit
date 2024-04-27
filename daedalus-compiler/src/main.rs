@@ -1,6 +1,6 @@
 use const_eval::Value;
 use daedalus_bytecode::{Bytecode, Instruction};
-use daedalus_parser::{ExprKind, LitKind};
+use daedalus_parser::{AssocOp, BlockItem, Expr, ExprKind, FunctionCall, Ident, LitKind};
 use dat_file::{
     properties::{DataType, SymbolCodeSpan},
     DatFile,
@@ -19,7 +19,11 @@ use symbol_indices::SymbolIndices;
 mod files;
 use files::{FileId, Files};
 
-use crate::{const_eval::ConstValues, files::File};
+use crate::{
+    const_eval::ConstValues,
+    files::File,
+    symbol_indices::{SymbolIndex, SymbolKind},
+};
 
 mod const_eval;
 
@@ -163,10 +167,8 @@ impl Compiler {
 
             daedalus_parser::Item::Instance(instance) => {
                 let ident = ZString::from(instance.ident.raw.as_bytes().to_ascii_uppercase());
-                let parent = self
-                    .symbol_indices
-                    .get(&instance.parent.raw.to_uppercase())
-                    .expect("TODO");
+                let parent = instance.parent.raw.to_uppercase();
+                let parent_id = self.symbol_indices.get(&parent).expect("TODO").id;
                 let span = &instance.span;
 
                 let line_start = files.line_index(file_id, span.start as u32).0;
@@ -180,42 +182,158 @@ impl Compiler {
 
                 let address = self.bytecode.next_available_address();
 
-                let this = self.symbol_table.instance(ident, span, address, *parent);
-                let humans_mds = self.symbol_table.string(ZString::from("HUMANS.MDS"));
-                let hum_body_naked0 = self.symbol_table.string(ZString::from("hum_body_Naked0"));
-                let hum_head_pony = self.symbol_table.string(ZString::from("Hum_Head_Pony"));
+                let this = self.symbol_table.instance(ident, span, address, parent_id);
 
-                let npc_attributes = *self.symbol_indices.get("C_NPC.ATTRIBUTE").unwrap();
-                let mdl_set_visual = *self.symbol_indices.get("MDL_SETVISUAL").unwrap();
-                let mdl_set_visual_body = *self.symbol_indices.get("MDL_SETVISUALBODY").unwrap();
+                struct BlockBuilder<'a, 'b> {
+                    parent: &'a str,
+                    this: u32,
+                    symbol_indices: &'a SymbolIndices,
+                    symbol_table: &'a mut DatSymbolTable,
+                    block: &'a mut daedalus_bytecode::BytecodeBlockBuilder<'b>,
+                }
 
-                self.bytecode
-                    .block_builder()
-                    // attribute[0] = 20
-                    .var_assign_int((npc_attributes, 0), 20)
-                    // attribute[1] = 40
-                    .var_assign_int((npc_attributes, 1), 40)
+                impl<'a, 'b> BlockBuilder<'a, 'b> {
+                    fn visit_block_item(&mut self, item: &BlockItem) {
+                        match item {
+                            BlockItem::Expr(expr) => self.visit_expr(expr),
+                            _ => todo!(),
+                        }
+                    }
+
+                    fn visit_expr(&mut self, expr: &Expr) {
+                        match &expr.kind {
+                            ExprKind::Binary(op, left, right) => {
+                                self.visit_binary_op(op, left, right)
+                            }
+                            ExprKind::Call(call) => self.visit_call(call),
+                            _ => todo!(),
+                        }
+                    }
+
+                    fn visit_binary_op(&mut self, op: &AssocOp, left: &Expr, right: &Expr) {
+                        assert_eq!(*op, AssocOp::Assign);
+
+                        let ExprKind::Index(symbol, id) = &left.kind else {
+                            todo!()
+                        };
+
+                        let ExprKind::Ident(symbol) = &symbol.kind else {
+                            todo!()
+                        };
+                        let symbol = symbol.raw.to_uppercase();
+                        let symbol = format!("{}.{symbol}", self.parent);
+
+                        let ExprKind::Lit(id) = &id.kind else { todo!() };
+                        let LitKind::Intager(id) = &id.kind else {
+                            todo!()
+                        };
+                        let id: u8 = id.parse().expect("TODO");
+
+                        let ExprKind::Lit(value) = &right.kind else {
+                            todo!()
+                        };
+                        let LitKind::Intager(value) = &value.kind else {
+                            todo!()
+                        };
+                        let value: i32 = value.parse().expect("TODO");
+
+                        // "C_NPC.ATTRIBUTE"
+                        let npc_attributes = self.symbol_indices.get(&symbol).unwrap().id;
+
+                        self.block.var_assign_int((npc_attributes, id), value);
+                    }
+
+                    fn visit_reference(&self, ident: &Ident) -> SymbolIndex {
+                        match ident.raw.to_uppercase().as_str() {
+                            "SELF" | "THIS" => SymbolIndex {
+                                id: self.this,
+                                kind: SymbolKind::Instance,
+                            },
+                            ident => *self.symbol_indices.get(ident).expect("TODO"),
+                        }
+                    }
+
+                    fn visit_call_arg(&mut self, arg: &Expr) {
+                        match &arg.kind {
+                            ExprKind::Ident(arg) => {
+                                let symbol = self.visit_reference(arg);
+                                self.block.push_instruction(
+                                    if SymbolKind::Instance == symbol.kind {
+                                        Instruction::push_var_instance(symbol.id)
+                                    } else {
+                                        Instruction::push_var(symbol.id)
+                                    },
+                                );
+                            }
+                            ExprKind::Lit(lit) => match &lit.kind {
+                                LitKind::Intager(v) => {
+                                    let v: i32 = v.parse().unwrap();
+                                    self.block.push_instruction(Instruction::push_int(v.abs()));
+                                    if v.is_negative() {
+                                        self.block.push_instruction(Instruction::negate());
+                                    }
+                                }
+                                LitKind::Float(v) => {
+                                    let v: f32 = v.parse().unwrap();
+                                    // Well that's fun, it turns out floats were ints all along
+                                    let v = v.to_le_bytes();
+                                    let v = i32::from_le_bytes(v);
+                                    self.block.push_instruction(Instruction::push_int(v));
+                                }
+                                LitKind::String(v) => {
+                                    self.block.push_instruction(Instruction::push_var(
+                                        self.symbol_table.string(ZString::from(v.as_bytes())),
+                                    ));
+                                }
+                            },
+                            _ => {
+                                todo!()
+                            }
+                        };
+                    }
+
                     // Mdl_SetVisual(self, "HUMANS.MDS")
-                    .extend(&[
-                        Instruction::push_var_instance(this),
-                        Instruction::push_var(humans_mds),
-                        Instruction::call_extern(mdl_set_visual),
-                    ])
                     // Mdl_SetVisualBody(self, "hum_body_Naked0", 9, 0, "Hum_Head_Pony", 18, 0, -1);
-                    .extend(&[
-                        Instruction::push_var_instance(this),
-                        Instruction::push_var(hum_body_naked0),
-                        Instruction::push_int(9),
-                        Instruction::push_int(0),
-                        Instruction::push_var(hum_head_pony),
-                        Instruction::push_int(18),
-                        Instruction::push_int(0),
-                        Instruction::push_int(1),
-                        Instruction::negate(),
-                        Instruction::call_extern(mdl_set_visual_body),
-                    ])
-                    .ret()
-                    .done();
+                    fn visit_call(&mut self, call: &FunctionCall) {
+                        let ident = call.ident.raw.to_uppercase();
+
+                        for arg in call.args.iter() {
+                            self.visit_call_arg(arg);
+                        }
+
+                        let symbol = self.symbol_indices.get(&ident).unwrap();
+                        match symbol.kind {
+                            SymbolKind::ExternFunction => {
+                                self.block.extend(&[Instruction::call_extern(symbol.id)]);
+                            }
+                            SymbolKind::Function => {
+                                self.block.extend(&[Instruction::call(symbol.id)]);
+                            }
+                            SymbolKind::Instance => todo!(),
+                            SymbolKind::Other => todo!(),
+                        }
+                    }
+                }
+
+                let mut block = self.bytecode.block_builder();
+
+                let mut builder = BlockBuilder {
+                    parent: &parent,
+                    this,
+                    symbol_indices: &self.symbol_indices,
+                    symbol_table: &mut self.symbol_table,
+                    block: &mut block,
+                };
+
+                // attribute[0] = 20
+                // attribute[1] = 40
+                // Mdl_SetVisual(self, "HUMANS.MDS")
+                // Mdl_SetVisualBody(self, "hum_body_Naked0", 9, 0, "Hum_Head_Pony", 18, 0, -1);
+                for item in instance.block.items.iter() {
+                    builder.visit_block_item(item);
+                }
+
+                block.ret();
             }
 
             daedalus_parser::Item::Func(func) => {
@@ -231,7 +349,11 @@ impl Compiler {
                     (span.start as u32, span.end as u32 - span.start as u32 + 2),
                 );
 
-                let address = self.bytecode.block_builder().ret().done();
+                let address = {
+                    let mut block = self.bytecode.block_builder();
+                    block.ret();
+                    block.addr()
+                };
 
                 self.symbol_table
                     .func(ident, span, &[], DataType::Void, address);

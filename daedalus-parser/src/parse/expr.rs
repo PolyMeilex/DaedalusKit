@@ -8,7 +8,7 @@ use crate::{
 
 use super::{FunctionCall, Ident};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum AssocOp {
     /// `+`
     Add,

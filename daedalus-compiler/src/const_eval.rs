@@ -138,7 +138,7 @@ impl<'a> ConstEvaluator<'a> {
                 if let Some(ref_item) = self.map.map.get(ident.raw.to_uppercase().as_str()) {
                     self.visit_const(ref_item)
                 } else if let Some(symbol) = self.indices.get(&ident.raw.to_uppercase()) {
-                    Value::Symbol(*symbol)
+                    Value::Symbol(symbol.id)
                 } else {
                     todo!()
                 }
