@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::Token;
 use logos::Span;
 use std::fmt::Write;
 
@@ -32,22 +32,22 @@ impl DaedalusDisplay for Instance {
 }
 
 impl Instance {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::Instance)?;
-        let start = lexer.span().start;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.eat_token(Token::Instance)?;
+        let start = ctx.lexer.span().start;
 
-        let ident = Ident::parse(lexer)?;
+        let ident = Ident::parse(ctx)?;
 
-        lexer.eat_token(Token::OpenParen)?;
+        ctx.lexer.eat_token(Token::OpenParen)?;
 
-        let parent = Ident::parse(lexer)?;
+        let parent = Ident::parse(ctx)?;
 
-        lexer.eat_token(Token::CloseParen)?;
+        ctx.lexer.eat_token(Token::CloseParen)?;
 
-        let block = Block::parse(lexer)?;
+        let block = Block::parse(ctx)?;
 
-        lexer.eat_token(Token::Semi)?;
-        let end = lexer.span().end;
+        ctx.lexer.eat_token(Token::Semi)?;
+        let end = ctx.lexer.span().end;
 
         Ok(Self {
             ident,

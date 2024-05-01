@@ -1,9 +1,9 @@
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::Token;
 use std::fmt::Write;
 
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
 
 #[derive(Debug)]
@@ -19,8 +19,8 @@ impl DaedalusDisplay for Ident {
 }
 
 impl Ident {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        let raw = lexer.eat_token(Token::Ident)?;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        let raw = ctx.lexer.eat_token(Token::Ident)?;
         Ok(Self {
             raw: raw.to_string(),
         })

@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::Token;
 use std::fmt::Write;
 
 use super::{Ident, Ty, Var};
@@ -37,33 +37,33 @@ impl DaedalusDisplay for ExternFunctionDefinition {
 }
 
 impl ExternFunctionDefinition {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::Extern)?;
-        lexer.eat_token(Token::Func)?;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.eat_token(Token::Extern)?;
+        ctx.lexer.eat_token(Token::Func)?;
 
-        let ty = Ty::parse(lexer)?;
-        let ident = Ident::parse(lexer)?;
+        let ty = Ty::parse(ctx)?;
+        let ident = Ident::parse(ctx)?;
 
-        lexer.eat_token(Token::OpenParen)?;
+        ctx.lexer.eat_token(Token::OpenParen)?;
 
         let mut args = Vec::new();
         loop {
-            if lexer.peek()? == Token::CloseParen {
+            if ctx.lexer.peek()? == Token::CloseParen {
                 break;
             }
-            args.push(Var::parse(lexer)?);
+            args.push(Var::parse(ctx)?);
 
-            if lexer.peek()? == Token::Comma {
-                lexer.eat_token(Token::Comma)?;
+            if ctx.lexer.peek()? == Token::Comma {
+                ctx.lexer.eat_token(Token::Comma)?;
             } else {
                 break;
             }
         }
 
-        lexer.eat_token(Token::CloseParen)?;
+        ctx.lexer.eat_token(Token::CloseParen)?;
 
-        if lexer.peek()? == Token::Semi {
-            lexer.eat_token(Token::Semi)?;
+        if ctx.lexer.peek()? == Token::Semi {
+            ctx.lexer.eat_token(Token::Semi)?;
         }
 
         Ok(Self { ident, ty, args })

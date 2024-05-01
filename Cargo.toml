@@ -16,6 +16,7 @@ daedalus-bytecode = { path = "./daedalus-bytecode" }
 daedalus-lexer = { path = "./daedalus-lexer" }
 daedalus-parser = { path = "./daedalus-parser" }
 dat-file = { path = "./dat-file" }
+interner = { path = "./interner" }
 src-file = { path = "./src-file" }
 zstring = { path = "./zstring" }
 # Off for now, until it is statically linkable
@@ -31,3 +32,5 @@ logos = "0.14.0"
 num-derive = "0.4.2"
 num-traits = "0.2.18"
 thiserror = "1.0.58"
+unicase = "2.7.0"
+rustc-hash = "1.1.0"

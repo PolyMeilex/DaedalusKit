@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token, TokenError};
+use daedalus_lexer::{Token, TokenError};
 use std::fmt::Write;
 
 use super::{Expr, Ident};
@@ -30,38 +30,38 @@ impl DaedalusDisplay for FunctionCall {
 }
 
 impl FunctionCall {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        let ident = Ident::parse(lexer)?;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        let ident = Ident::parse(ctx)?;
 
-        let args = Self::parse_paren(lexer)?;
+        let args = Self::parse_paren(ctx)?;
 
         Ok(Self { ident, args })
     }
 
-    fn parse_paren(lexer: &mut DaedalusLexer) -> Result<Vec<Expr>, ParseError> {
+    fn parse_paren(ctx: &mut DaedalusParser) -> Result<Vec<Expr>, ParseError> {
         let mut out = Vec::new();
 
-        lexer.eat_token(Token::OpenParen)?;
+        ctx.lexer.eat_token(Token::OpenParen)?;
 
-        if lexer.peek()? != Token::CloseParen {
-            let expr = Expr::parse(lexer)?;
+        if ctx.lexer.peek()? != Token::CloseParen {
+            let expr = Expr::parse(ctx)?;
             out.push(expr);
         }
 
         loop {
-            match lexer.peek()? {
+            match ctx.lexer.peek()? {
                 Token::CloseParen => {
-                    lexer.eat_token(Token::CloseParen)?;
+                    ctx.lexer.eat_token(Token::CloseParen)?;
                     break;
                 }
                 Token::Comma => {
-                    lexer.eat_token(Token::Comma)?;
-                    let expr = Expr::parse(lexer)?;
+                    ctx.lexer.eat_token(Token::Comma)?;
+                    let expr = Expr::parse(ctx)?;
                     out.push(expr);
                 }
                 got => {
-                    lexer.eat_any()?;
-                    return Err(TokenError::unexpeced_token(got, lexer.span()).into());
+                    ctx.lexer.eat_any()?;
+                    return Err(TokenError::unexpeced_token(got, ctx.lexer.span()).into());
                 }
             }
         }

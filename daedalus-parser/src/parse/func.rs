@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::Token;
 use logos::Span;
 use std::fmt::Write;
 
@@ -42,34 +42,34 @@ impl DaedalusDisplay for FunctionDefinition {
 }
 
 impl FunctionDefinition {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::Func)?;
-        let start = lexer.span().start;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.eat_token(Token::Func)?;
+        let start = ctx.lexer.span().start;
 
-        let ty = Ty::parse(lexer)?;
-        let ident = Ident::parse(lexer)?;
+        let ty = Ty::parse(ctx)?;
+        let ident = Ident::parse(ctx)?;
 
-        lexer.eat_token(Token::OpenParen)?;
+        ctx.lexer.eat_token(Token::OpenParen)?;
 
         let mut args = Vec::new();
         loop {
-            if lexer.peek()? == Token::CloseParen {
+            if ctx.lexer.peek()? == Token::CloseParen {
                 break;
             }
-            args.push(Var::parse(lexer)?);
+            args.push(Var::parse(ctx)?);
 
-            if lexer.peek()? == Token::Comma {
-                lexer.eat_token(Token::Comma)?;
+            if ctx.lexer.peek()? == Token::Comma {
+                ctx.lexer.eat_token(Token::Comma)?;
             } else {
                 break;
             }
         }
 
-        lexer.eat_token(Token::CloseParen)?;
+        ctx.lexer.eat_token(Token::CloseParen)?;
 
-        let block = Block::parse(lexer)?;
-        lexer.eat_token(Token::Semi)?;
-        let end = lexer.span().end;
+        let block = Block::parse(ctx)?;
+        ctx.lexer.eat_token(Token::Semi)?;
+        let end = ctx.lexer.span().end;
 
         Ok(Self {
             ident,

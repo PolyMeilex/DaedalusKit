@@ -13,6 +13,10 @@ pub type Result<T> = std::result::Result<T, ParseError>;
 
 type ParseBacktrace = std::backtrace::Backtrace;
 
+pub struct DaedalusParser<'a> {
+    pub lexer: &'a mut DaedalusLexer<'a>,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
     #[error(transparent)]

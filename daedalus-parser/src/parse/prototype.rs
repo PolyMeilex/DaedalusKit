@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::Token;
 use std::fmt::Write;
 
 use super::{Block, Ident};
@@ -30,20 +30,20 @@ impl DaedalusDisplay for Prototype {
 }
 
 impl Prototype {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::Prototype)?;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.eat_token(Token::Prototype)?;
 
-        let ident = Ident::parse(lexer)?;
+        let ident = Ident::parse(ctx)?;
 
-        lexer.eat_token(Token::OpenParen)?;
+        ctx.lexer.eat_token(Token::OpenParen)?;
 
-        let parent = Ident::parse(lexer)?;
+        let parent = Ident::parse(ctx)?;
 
-        lexer.eat_token(Token::CloseParen)?;
+        ctx.lexer.eat_token(Token::CloseParen)?;
 
-        let block = Block::parse(lexer)?;
+        let block = Block::parse(ctx)?;
 
-        lexer.eat_token(Token::Semi)?;
+        ctx.lexer.eat_token(Token::Semi)?;
 
         Ok(Self {
             ident,

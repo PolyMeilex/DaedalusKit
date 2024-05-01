@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::Token;
 use std::fmt::Write;
 
 use super::Expr;
@@ -26,17 +26,17 @@ impl DaedalusDisplay for ReturnStatement {
 }
 
 impl ReturnStatement {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::Return)?;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.eat_token(Token::Return)?;
 
-        let expr = if lexer.peek()? != Token::Semi {
-            let expr = Expr::parse(lexer)?;
+        let expr = if ctx.lexer.peek()? != Token::Semi {
+            let expr = Expr::parse(ctx)?;
             Some(expr)
         } else {
             None
         };
 
-        lexer.eat_token(Token::Semi)?;
+        ctx.lexer.eat_token(Token::Semi)?;
 
         Ok(Self { expr })
     }

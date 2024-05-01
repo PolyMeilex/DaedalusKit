@@ -4,7 +4,7 @@ use std::ffi::{OsStr, OsString};
 
 use codespan::{ByteIndex, LineIndex, Location};
 use codespan_reporting::files::Error;
-use daedalus_parser::DaedalusLexer;
+use daedalus_parser::{DaedalusLexer, DaedalusParser};
 
 pub struct File {
     pub id: FileId,
@@ -50,7 +50,9 @@ impl<'a> Files<'a> {
             id: self.len as u32 - 1,
         };
 
-        let ast = daedalus_parser::File::parse(&mut DaedalusLexer::new(source))?;
+        let ast = daedalus_parser::File::parse(&mut DaedalusParser {
+            lexer: &mut DaedalusLexer::new(source),
+        })?;
 
         Ok(File { id, ast })
     }

@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::Token;
 use logos::Span;
 use std::fmt::Write;
 
@@ -36,27 +36,27 @@ impl DaedalusDisplay for Class {
 }
 
 impl Class {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::Class)?;
-        let start = lexer.span().start;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.eat_token(Token::Class)?;
+        let start = ctx.lexer.span().start;
 
-        let ident = Ident::parse(lexer)?;
+        let ident = Ident::parse(ctx)?;
 
-        lexer.eat_token(Token::OpenBrace)?;
+        ctx.lexer.eat_token(Token::OpenBrace)?;
 
         let mut fields = Vec::new();
         loop {
-            if lexer.peek()? == Token::CloseBrace {
+            if ctx.lexer.peek()? == Token::CloseBrace {
                 break;
             }
 
-            fields.push(Var::parse(lexer)?);
-            lexer.eat_token(Token::Semi)?;
+            fields.push(Var::parse(ctx)?);
+            ctx.lexer.eat_token(Token::Semi)?;
         }
 
-        lexer.eat_token(Token::CloseBrace)?;
-        lexer.eat_token(Token::Semi)?;
-        let end = lexer.span().end;
+        ctx.lexer.eat_token(Token::CloseBrace)?;
+        ctx.lexer.eat_token(Token::Semi)?;
+        let end = ctx.lexer.span().end;
 
         Ok(Self {
             ident,

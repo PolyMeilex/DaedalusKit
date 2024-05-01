@@ -1,11 +1,14 @@
 use daedalus_lexer::{DaedalusLexer, Token};
-use daedalus_parser::{fmt::DaedalusFormatter, File};
+use daedalus_parser::{fmt::DaedalusFormatter, DaedalusParser, File};
 use pretty_assertions::assert_eq;
 
 #[test]
 fn parser_g2notr_diff() {
     fn diff(_path: &std::path::Path, src: &str) {
-        let ast = File::parse(&mut DaedalusLexer::new(src)).unwrap();
+        let ast = File::parse(&mut DaedalusParser {
+            lexer: &mut DaedalusLexer::new(src),
+        })
+        .unwrap();
         let mut out = String::new();
         DaedalusFormatter::new(&mut out).format(ast).unwrap();
 

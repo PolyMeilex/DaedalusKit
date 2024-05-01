@@ -1,7 +1,7 @@
 use std::{path::Path, process::exit};
 
 use daedalus_lexer::DaedalusLexer;
-use daedalus_parser::{fmt, ParseError};
+use daedalus_parser::{fmt, DaedalusParser, ParseError};
 
 fn main() {
     // let bytes = include_bytes!("../../DIA_bau_950_lobart.d");
@@ -30,7 +30,7 @@ fn parse(path: &Path, bytes: &[u8]) {
     let emit_error = |err: &ParseError| emit_error(path, &src, err);
     let mut formatter = fmt::DaedalusFormatter::new(fmt::IoFmt(std::io::stdout()));
 
-    let file = match daedalus_parser::File::parse(&mut lexer) {
+    let file = match daedalus_parser::File::parse(&mut DaedalusParser { lexer: &mut lexer }) {
         Ok(file) => file,
         Err(err) => {
             emit_error(&err);

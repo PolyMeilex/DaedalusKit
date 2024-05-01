@@ -1,4 +1,4 @@
-use daedalus_lexer::{DaedalusLexer, Token, TokenError};
+use daedalus_lexer::{Token, TokenError};
 
 mod instance;
 pub use instance::Instance;
@@ -44,7 +44,7 @@ pub use ident::Ident;
 
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
 
 use std::fmt::Write;
@@ -99,41 +99,41 @@ impl DaedalusDisplay for File {
 }
 
 impl File {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
         let mut items = Vec::new();
 
         loop {
-            match lexer.peek()? {
+            match ctx.lexer.peek()? {
                 Token::Class => {
-                    items.push(Item::Class(Class::parse(lexer)?));
+                    items.push(Item::Class(Class::parse(ctx)?));
                 }
                 Token::Instance => {
-                    items.push(Item::Instance(Instance::parse(lexer)?));
+                    items.push(Item::Instance(Instance::parse(ctx)?));
                 }
                 Token::Prototype => {
-                    items.push(Item::Prototype(Prototype::parse(lexer)?));
+                    items.push(Item::Prototype(Prototype::parse(ctx)?));
                 }
                 Token::Const => {
-                    items.push(Item::Const(Const::parse(lexer)?));
-                    lexer.eat_token(Token::Semi)?;
+                    items.push(Item::Const(Const::parse(ctx)?));
+                    ctx.lexer.eat_token(Token::Semi)?;
                 }
                 Token::Var => {
-                    items.push(Item::Var(Var::parse(lexer)?));
-                    lexer.eat_token(Token::Semi)?;
+                    items.push(Item::Var(Var::parse(ctx)?));
+                    ctx.lexer.eat_token(Token::Semi)?;
                 }
                 Token::Func => {
-                    items.push(Item::Func(FunctionDefinition::parse(lexer)?));
+                    items.push(Item::Func(FunctionDefinition::parse(ctx)?));
                 }
                 Token::Extern => {
-                    items.push(Item::ExternFunc(ExternFunctionDefinition::parse(lexer)?));
+                    items.push(Item::ExternFunc(ExternFunctionDefinition::parse(ctx)?));
                 }
                 Token::Eof => {
-                    lexer.eat_token(Token::Eof)?;
+                    ctx.lexer.eat_token(Token::Eof)?;
                     break;
                 }
                 got => {
-                    lexer.eat_any()?;
-                    return Err(TokenError::unexpeced_token(got, lexer.span()).into());
+                    ctx.lexer.eat_any()?;
+                    return Err(TokenError::unexpeced_token(got, ctx.lexer.span()).into());
                 }
             }
         }
@@ -145,10 +145,14 @@ impl File {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use daedalus_lexer::DaedalusLexer;
     use pretty_assertions::assert_eq;
 
     fn diff(src: &str) {
-        let ast = File::parse(&mut DaedalusLexer::new(src)).unwrap();
+        let ast = File::parse(&mut DaedalusParser {
+            lexer: &mut DaedalusLexer::new(src),
+        })
+        .unwrap();
         let mut out = String::new();
         DaedalusFormatter::new(&mut out).format(ast).unwrap();
         assert_eq!(src.trim_end(), out.trim_end());

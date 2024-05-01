@@ -3,7 +3,7 @@ use std::{backtrace::Backtrace, fmt::Write};
 
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
 
 use super::{FunctionCall, Ident};
@@ -297,31 +297,31 @@ impl DaedalusDisplay for Expr {
 }
 
 impl Expr {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        lexer.eat_whitespace();
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.eat_whitespace();
 
-        let left = Self::parse_without_op(lexer)?;
-        let expr = Self::parse_with_op(lexer, left, 0)?;
+        let left = Self::parse_without_op(ctx)?;
+        let expr = Self::parse_with_op(ctx, left, 0)?;
 
         Ok(expr)
     }
 
     fn parse_with_op(
-        lexer: &mut DaedalusLexer,
+        ctx: &mut DaedalusParser,
         mut left: Self,
         left_priority: u32,
     ) -> Result<Self, ParseError> {
-        while let Some(op) = AssocOp::parse_op(&mut lexer.clone())? {
+        while let Some(op) = AssocOp::parse_op(&mut ctx.lexer.clone())? {
             let priority = op.priority();
 
             if priority < left_priority {
                 break;
             };
 
-            AssocOp::parse_op(lexer)?;
+            AssocOp::parse_op(ctx.lexer)?;
 
-            let right = Self::parse_without_op(lexer)?;
-            let res = Self::parse_with_op(lexer, right, priority + 1)?;
+            let right = Self::parse_without_op(ctx)?;
+            let res = Self::parse_with_op(ctx, right, priority + 1)?;
 
             left = Self {
                 kind: ExprKind::Binary(op, Box::new(left), Box::new(res)),
@@ -331,25 +331,25 @@ impl Expr {
         Ok(left)
     }
 
-    fn parse_without_op(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        let mut peek_lexer = lexer.clone();
+    fn parse_without_op(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        let mut peek_lexer = ctx.lexer.clone();
         let expr = match peek_lexer.peek()? {
             Token::Bang => {
-                lexer.eat_token(Token::Bang)?;
-                let expr = Self::parse_without_op(lexer)?;
+                ctx.lexer.eat_token(Token::Bang)?;
+                let expr = Self::parse_without_op(ctx)?;
                 Expr {
                     kind: ExprKind::Unary(UnaryOp::Not, Box::new(expr)),
                 }
             }
             Token::Minus => {
-                lexer.eat_token(Token::Minus)?;
-                let expr = Self::parse_without_op(lexer)?;
+                ctx.lexer.eat_token(Token::Minus)?;
+                let expr = Self::parse_without_op(ctx)?;
                 Expr {
                     kind: ExprKind::Unary(UnaryOp::Negative, Box::new(expr)),
                 }
             }
             Token::String => {
-                let raw = lexer.eat_token(Token::String)?;
+                let raw = ctx.lexer.eat_token(Token::String)?;
                 Expr {
                     kind: ExprKind::Lit(Lit {
                         kind: LitKind::String(raw.to_string()),
@@ -357,10 +357,10 @@ impl Expr {
                 }
             }
             Token::Integer => {
-                let raw = lexer.eat_token(Token::Integer)?;
+                let raw = ctx.lexer.eat_token(Token::Integer)?;
                 let value = raw.parse::<i32>().map_err(|err| ParseError::IntLitError {
                     err,
-                    span: lexer.span(),
+                    span: ctx.lexer.span(),
                     backtrace: Backtrace::capture(),
                 })?;
                 Expr {
@@ -370,12 +370,12 @@ impl Expr {
                 }
             }
             Token::Float => {
-                let raw = lexer.eat_token(Token::Float)?;
+                let raw = ctx.lexer.eat_token(Token::Float)?;
                 let value = raw
                     .parse::<f32>()
                     .map_err(|err| ParseError::FloatLitError {
                         err,
-                        span: lexer.span(),
+                        span: ctx.lexer.span(),
                         backtrace: Backtrace::capture(),
                     })?;
                 Expr {
@@ -389,25 +389,25 @@ impl Expr {
 
                 let expr = match peek_lexer.peek()? {
                     Token::OpenParen => {
-                        let call = FunctionCall::parse(lexer)?;
+                        let call = FunctionCall::parse(ctx)?;
                         Expr {
                             kind: ExprKind::Call(call),
                         }
                     }
                     _ => {
-                        let ident = Ident::parse(lexer)?;
+                        let ident = Ident::parse(ctx)?;
                         Expr {
                             kind: ExprKind::Ident(ident),
                         }
                     }
                 };
 
-                Self::parse_reference(lexer, expr)?
+                Self::parse_reference(ctx, expr)?
             }
             Token::OpenParen => {
-                lexer.eat_token(Token::OpenParen)?;
-                let expr = Expr::parse(lexer)?;
-                lexer.eat_token(Token::CloseParen)?;
+                ctx.lexer.eat_token(Token::OpenParen)?;
+                let expr = Expr::parse(ctx)?;
+                ctx.lexer.eat_token(Token::CloseParen)?;
                 Expr {
                     kind: ExprKind::Paren(Box::new(expr)),
                 }
@@ -422,30 +422,30 @@ impl Expr {
     }
 
     pub fn parse_reference(
-        lexer: &mut DaedalusLexer,
+        ctx: &mut DaedalusParser,
         parent_expr: Self,
     ) -> Result<Self, ParseError> {
-        let expr = if lexer.peek()? == Token::OpenBracket {
-            Self::parse_array_index(lexer, parent_expr)?
+        let expr = if ctx.lexer.peek()? == Token::OpenBracket {
+            Self::parse_array_index(ctx, parent_expr)?
         } else {
             parent_expr
         };
 
-        if lexer.peek()? == Token::Dot {
-            let expr = Self::parse_field_access(lexer, expr)?;
-            Self::parse_reference(lexer, expr)
+        if ctx.lexer.peek()? == Token::Dot {
+            let expr = Self::parse_field_access(ctx, expr)?;
+            Self::parse_reference(ctx, expr)
         } else {
             Ok(expr)
         }
     }
 
     pub fn parse_array_index(
-        lexer: &mut DaedalusLexer,
+        ctx: &mut DaedalusParser,
         parent_expr: Self,
     ) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::OpenBracket)?;
-        let index = Expr::parse(lexer)?;
-        lexer.eat_token(Token::CloseBracket)?;
+        ctx.lexer.eat_token(Token::OpenBracket)?;
+        let index = Expr::parse(ctx)?;
+        ctx.lexer.eat_token(Token::CloseBracket)?;
 
         Ok(Expr {
             kind: ExprKind::Index(Box::new(parent_expr), Box::new(index)),
@@ -453,11 +453,11 @@ impl Expr {
     }
 
     pub fn parse_field_access(
-        lexer: &mut DaedalusLexer,
+        ctx: &mut DaedalusParser,
         parent_expr: Self,
     ) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::Dot)?;
-        let ident = Ident::parse(lexer)?;
+        ctx.lexer.eat_token(Token::Dot)?;
+        let ident = Ident::parse(ctx)?;
         Ok(Expr {
             kind: ExprKind::Field(Box::new(parent_expr), ident),
         })
@@ -477,7 +477,10 @@ mod tests {
         1 + 2 * 3 + 4
         "};
 
-        let expr = Expr::parse(&mut DaedalusLexer::new(src)).unwrap();
+        let expr = Expr::parse(&mut DaedalusParser {
+            lexer: &mut DaedalusLexer::new(src),
+        })
+        .unwrap();
         dbg!(expr);
     }
 }

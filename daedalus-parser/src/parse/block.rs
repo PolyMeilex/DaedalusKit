@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token, TokenError};
+use daedalus_lexer::{Token, TokenError};
 use std::fmt::Write;
 
 use super::{Expr, IfStatement, ReturnStatement, Var};
@@ -58,13 +58,13 @@ impl DaedalusDisplay for Block {
 }
 
 impl Block {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::OpenBrace)?;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.eat_token(Token::OpenBrace)?;
 
         let mut items = Vec::new();
         let mut nest = 1;
         loop {
-            match lexer.peek()? {
+            match ctx.lexer.peek()? {
                 Token::OpenBrace => {
                     nest += 1;
                 }
@@ -76,30 +76,30 @@ impl Block {
                     }
                 }
                 Token::Var => {
-                    items.push(BlockItem::Var(Var::parse(lexer)?));
-                    lexer.eat_token(Token::Semi)?;
+                    items.push(BlockItem::Var(Var::parse(ctx)?));
+                    ctx.lexer.eat_token(Token::Semi)?;
                     continue;
                 }
                 Token::If => {
-                    items.push(BlockItem::If(IfStatement::parse(lexer)?));
+                    items.push(BlockItem::If(IfStatement::parse(ctx)?));
                     continue;
                 }
                 Token::Return => {
-                    items.push(BlockItem::Return(ReturnStatement::parse(lexer)?));
+                    items.push(BlockItem::Return(ReturnStatement::parse(ctx)?));
                     continue;
                 }
                 Token::Ident => {
-                    items.push(BlockItem::Expr(Expr::parse(lexer)?));
-                    lexer.eat_token(Token::Semi)?;
+                    items.push(BlockItem::Expr(Expr::parse(ctx)?));
+                    ctx.lexer.eat_token(Token::Semi)?;
                 }
                 got => {
-                    lexer.eat_any()?;
-                    return Err(TokenError::unexpeced_token(got, lexer.span()).into());
+                    ctx.lexer.eat_any()?;
+                    return Err(TokenError::unexpeced_token(got, ctx.lexer.span()).into());
                 }
             }
         }
 
-        lexer.eat_token(Token::CloseBrace)?;
+        ctx.lexer.eat_token(Token::CloseBrace)?;
 
         Ok(Self { items })
     }

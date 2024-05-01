@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::Token;
 use logos::Span;
 use std::fmt::Write;
 
@@ -68,34 +68,34 @@ impl DaedalusDisplay for Var {
 }
 
 impl Var {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        lexer.eat_token(Token::Var)?;
-        let start = lexer.span().start;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.eat_token(Token::Var)?;
+        let start = ctx.lexer.span().start;
 
-        let ty = Ty::parse(lexer)?;
-        let ident = Ident::parse(lexer)?;
+        let ty = Ty::parse(ctx)?;
+        let ident = Ident::parse(ctx)?;
 
-        let kind = if lexer.peek()? == Token::OpenBracket {
-            lexer.eat_token(Token::OpenBracket)?;
-            let size_init = Expr::parse(lexer)?;
-            lexer.eat_token(Token::CloseBracket)?;
+        let kind = if ctx.lexer.peek()? == Token::OpenBracket {
+            ctx.lexer.eat_token(Token::OpenBracket)?;
+            let size_init = Expr::parse(ctx)?;
+            ctx.lexer.eat_token(Token::CloseBracket)?;
 
-            let init = if lexer.peek()? == Token::Eq {
-                lexer.eat_token(Token::Eq)?;
-                lexer.eat_token(Token::OpenBrace)?;
+            let init = if ctx.lexer.peek()? == Token::Eq {
+                ctx.lexer.eat_token(Token::Eq)?;
+                ctx.lexer.eat_token(Token::OpenBrace)?;
 
                 let mut inits = Vec::new();
 
                 loop {
-                    let init = Expr::parse(lexer)?;
+                    let init = Expr::parse(ctx)?;
                     inits.push(init);
 
-                    if lexer.peek()? == Token::CloseBrace {
-                        lexer.eat_token(Token::CloseBrace)?;
+                    if ctx.lexer.peek()? == Token::CloseBrace {
+                        ctx.lexer.eat_token(Token::CloseBrace)?;
                         break;
                     } else {
                         // This is not the last element comma is mandatory
-                        lexer.eat_token(Token::Comma)?;
+                        ctx.lexer.eat_token(Token::Comma)?;
                     }
                 }
 
@@ -106,16 +106,16 @@ impl Var {
 
             VarKind::Array { size_init, init }
         } else {
-            let init = if lexer.peek()? == Token::Eq {
-                lexer.eat_token(Token::Eq)?;
-                Some(Expr::parse(lexer)?)
+            let init = if ctx.lexer.peek()? == Token::Eq {
+                ctx.lexer.eat_token(Token::Eq)?;
+                Some(Expr::parse(ctx)?)
             } else {
                 None
             };
 
             VarKind::Value { init }
         };
-        let end = lexer.span().end;
+        let end = ctx.lexer.span().end;
 
         Ok(Self {
             ident,

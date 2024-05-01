@@ -1,8 +1,8 @@
 use crate::{
     fmt::{DaedalusDisplay, DaedalusFormatter},
-    ParseError,
+    DaedalusParser, ParseError,
 };
-use daedalus_lexer::{DaedalusLexer, Token};
+use daedalus_lexer::Token;
 use std::fmt::Write;
 
 use super::{Block, Expr};
@@ -47,11 +47,11 @@ impl DaedalusDisplay for IfStatement {
 }
 
 impl IfStatement {
-    pub fn parse(lexer: &mut DaedalusLexer) -> Result<Self, ParseError> {
-        let (has_else, has_if) = if lexer.peek()? == Token::Else {
-            lexer.eat_token(Token::Else)?;
+    pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        let (has_else, has_if) = if ctx.lexer.peek()? == Token::Else {
+            ctx.lexer.eat_token(Token::Else)?;
 
-            let has_if = lexer.peek()? == Token::If;
+            let has_if = ctx.lexer.peek()? == Token::If;
 
             (true, has_if)
         } else {
@@ -59,22 +59,22 @@ impl IfStatement {
         };
 
         let condition = if has_if {
-            lexer.eat_token(Token::If)?;
-            Some(Expr::parse(lexer)?)
+            ctx.lexer.eat_token(Token::If)?;
+            Some(Expr::parse(ctx)?)
         } else {
             None
         };
 
-        let block = Block::parse(lexer)?;
+        let block = Block::parse(ctx)?;
 
         let mut next = None;
 
-        let has_semi = if lexer.peek()? == Token::Else {
-            let stmt = IfStatement::parse(lexer)?;
+        let has_semi = if ctx.lexer.peek()? == Token::Else {
+            let stmt = IfStatement::parse(ctx)?;
             next = Some(Box::new(stmt));
             false
-        } else if lexer.peek()? == Token::Semi {
-            lexer.eat_token(Token::Semi)?;
+        } else if ctx.lexer.peek()? == Token::Semi {
+            ctx.lexer.eat_token(Token::Semi)?;
             true
         } else {
             false
