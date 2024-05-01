@@ -1,10 +1,6 @@
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::Token;
 use logos::Span;
-use std::fmt::Write;
 
 use super::{Ident, Var};
 
@@ -13,26 +9,6 @@ pub struct Class {
     pub ident: Ident,
     pub fields: Vec<Var>,
     pub span: Span,
-}
-
-impl DaedalusDisplay for Class {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        writeln!(f, "class ")?;
-        self.ident.fmt(f)?;
-        writeln!(f, " {{")?;
-
-        f.push_indent();
-        for var in self.fields.iter() {
-            var.fmt(f)?;
-            writeln!(f, ";")?;
-        }
-        f.pop_indent();
-
-        writeln!(f, "}};")?;
-        writeln!(f)?;
-
-        Ok(())
-    }
 }
 
 impl Class {

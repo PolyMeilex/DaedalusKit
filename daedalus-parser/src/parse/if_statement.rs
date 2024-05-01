@@ -1,9 +1,5 @@
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::Token;
-use std::fmt::Write;
 
 use super::{Block, Expr};
 
@@ -15,35 +11,6 @@ pub struct IfStatement {
     pub block: Block,
     pub condition: Option<Expr>,
     pub next: Option<Box<IfStatement>>,
-}
-
-impl DaedalusDisplay for IfStatement {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        if let Some(condition) = self.condition.as_ref() {
-            if self.has_else {
-                write!(f, " else if ")?;
-            } else {
-                f.write_indent()?;
-                write!(f, "if ")?;
-            }
-
-            condition.fmt(f)?;
-
-            write!(f, " ")?;
-        } else if self.has_else {
-            write!(f, " else ")?;
-        }
-
-        self.block.fmt(f)?;
-
-        if let Some(next) = self.next.as_ref() {
-            next.fmt(f)?;
-        } else if self.has_semi {
-            writeln!(f, ";")?;
-        }
-
-        Ok(())
-    }
 }
 
 impl IfStatement {

@@ -1,9 +1,5 @@
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::Token;
-use std::fmt::Write;
 
 use super::{Block, Ident};
 
@@ -12,21 +8,6 @@ pub struct Prototype {
     pub ident: Ident,
     pub parent: Ident,
     pub block: Block,
-}
-
-impl DaedalusDisplay for Prototype {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        write!(f, "prototype ")?;
-        self.ident.fmt(f)?;
-        write!(f, "(")?;
-        self.parent.fmt(f)?;
-        write!(f, ") ")?;
-
-        self.block.fmt(f)?;
-        writeln!(f, ";")?;
-        writeln!(f)?;
-        Ok(())
-    }
 }
 
 impl Prototype {

@@ -2,8 +2,8 @@
 
 use std::num::{ParseFloatError, ParseIntError};
 
+pub use daedalus_lexer as lexer;
 pub use daedalus_lexer::DaedalusLexer;
-pub mod fmt;
 mod parse;
 
 use logos::Span;

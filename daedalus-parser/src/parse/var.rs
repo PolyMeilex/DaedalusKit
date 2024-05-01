@@ -1,10 +1,6 @@
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::Token;
 use logos::Span;
-use std::fmt::Write;
 
 use super::{Expr, Ident, Ty};
 
@@ -25,46 +21,6 @@ pub struct Var {
     pub ty: Ty,
     pub kind: VarKind,
     pub span: Span,
-}
-
-impl DaedalusDisplay for Var {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        f.write_indent()?;
-
-        write!(f, "var ")?;
-        self.ty.fmt(f)?;
-        write!(f, " ")?;
-        self.ident.fmt(f)?;
-
-        match &self.kind {
-            VarKind::Value { init: Some(init) } => {
-                write!(f, " = ")?;
-                init.fmt(f)?;
-            }
-            VarKind::Array { size_init, init } => {
-                write!(f, "[")?;
-                size_init.fmt(f)?;
-                write!(f, "]")?;
-
-                if let Some(init) = init {
-                    write!(f, " = {{")?;
-
-                    let mut iter = init.iter().peekable();
-                    while let Some(expr) = iter.next() {
-                        expr.fmt(f)?;
-                        if iter.peek().is_some() {
-                            write!(f, ", ")?;
-                        }
-                    }
-
-                    write!(f, "}}")?;
-                }
-            }
-            _ => {}
-        }
-
-        Ok(())
-    }
 }
 
 impl Var {

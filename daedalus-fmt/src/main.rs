@@ -1,13 +1,9 @@
 use std::{path::Path, process::exit};
 
-use daedalus_lexer::DaedalusLexer;
-use daedalus_parser::{fmt, DaedalusParser, ParseError};
+use daedalus_fmt as fmt;
+use daedalus_parser::{DaedalusLexer, DaedalusParser, ParseError};
 
 fn main() {
-    // let bytes = include_bytes!("../../DIA_bau_950_lobart.d");
-    // let bytes = include_bytes!("../../my.d");
-    // parse(&std::path::PathBuf::from("DIA_bau_950_lobart.d"), bytes);
-
     let base_path = "./test_data/G2MDK-PolishScripts/Content/";
     let mut src = src_file::load(format!("{base_path}Gothic.src"));
     src.append(&mut src_file::load(format!("{base_path}Fight.src")));

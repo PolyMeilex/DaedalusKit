@@ -1,9 +1,5 @@
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::{Token, TokenError};
-use std::fmt::Write;
 
 use super::{Expr, Ident};
 
@@ -11,22 +7,6 @@ use super::{Expr, Ident};
 pub struct FunctionCall {
     pub ident: Ident,
     pub args: Vec<Expr>,
-}
-
-impl DaedalusDisplay for FunctionCall {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        self.ident.fmt(f)?;
-        write!(f, "(")?;
-        let mut iter = self.args.iter().peekable();
-        while let Some(arg) = iter.next() {
-            arg.fmt(f)?;
-            if iter.peek().is_some() {
-                write!(f, ", ")?;
-            }
-        }
-        write!(f, ")")?;
-        Ok(())
-    }
 }
 
 impl FunctionCall {

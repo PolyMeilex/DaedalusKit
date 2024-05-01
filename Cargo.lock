@@ -92,6 +92,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "daedalus-fmt"
+version = "0.1.0"
+dependencies = [
+ "codespan-reporting",
+ "daedalus-parser",
+ "encoding_rs",
+ "indoc",
+ "pretty_assertions",
+ "src-file",
+]
+
+[[package]]
 name = "daedalus-lexer"
 version = "0.1.0"
 dependencies = [
@@ -108,7 +120,6 @@ dependencies = [
  "encoding_rs",
  "indoc",
  "logos",
- "pretty_assertions",
  "src-file",
  "thiserror",
 ]

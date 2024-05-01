@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "daedalus-bytecode",
   "daedalus-compiler",
+  "daedalus-fmt",
   "daedalus-lexer",
   "daedalus-parser",
   "dat-file",
@@ -34,3 +35,5 @@ num-traits = "0.2.18"
 thiserror = "1.0.58"
 unicase = "2.7.0"
 rustc-hash = "1.1.0"
+indoc = "2"
+pretty_assertions = "1.4.0"

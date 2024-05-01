@@ -42,12 +42,7 @@ pub use ty::Ty;
 mod ident;
 pub use ident::Ident;
 
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
-
-use std::fmt::Write;
+use crate::{DaedalusParser, ParseError};
 
 #[derive(Debug)]
 pub enum Item {
@@ -62,40 +57,6 @@ pub enum Item {
 
 pub struct File {
     pub items: Vec<Item>,
-}
-
-impl DaedalusDisplay for File {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        for item in &self.items {
-            match item {
-                Item::Class(v) => {
-                    v.fmt(f)?;
-                }
-                Item::Instance(v) => {
-                    v.fmt(f)?;
-                }
-                Item::Prototype(v) => {
-                    v.fmt(f)?;
-                }
-                Item::Var(v) => {
-                    v.fmt(f)?;
-                    writeln!(f, ";")?;
-                }
-                Item::Const(v) => {
-                    v.fmt(f)?;
-                    writeln!(f, ";")?;
-                }
-                Item::Func(v) => {
-                    v.fmt(f)?;
-                }
-                Item::ExternFunc(v) => {
-                    v.fmt(f)?;
-                }
-            }
-        }
-
-        Ok(())
-    }
 }
 
 impl File {
@@ -139,75 +100,5 @@ impl File {
         }
 
         Ok(Self { items })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use daedalus_lexer::DaedalusLexer;
-    use pretty_assertions::assert_eq;
-
-    fn diff(src: &str) {
-        let ast = File::parse(&mut DaedalusParser {
-            lexer: &mut DaedalusLexer::new(src),
-        })
-        .unwrap();
-        let mut out = String::new();
-        DaedalusFormatter::new(&mut out).format(ast).unwrap();
-        assert_eq!(src.trim_end(), out.trim_end());
-    }
-
-    macro_rules! diff {
-        ($($arg:tt)*) => {
-            diff(indoc::indoc!($($arg)*))
-        };
-    }
-
-    #[test]
-    fn extern_func() {
-        diff!("extern func void a();");
-        diff!("extern func int b();");
-        diff!("extern func string c(var int a);");
-        diff!("extern func float d(var int a, var int b);");
-        diff!("extern func func e(var func a, var int b);");
-    }
-
-    #[test]
-    fn func() {
-        diff!("func void a() {};");
-        diff!("func int b() {};");
-        diff!("func string c(var int a) {};");
-        diff!("func float d(var int a, var int b) {};");
-        diff!("func func e(var func a, var int b) {};");
-    }
-
-    #[test]
-    fn expr() {
-        diff! {"
-            func int a() {
-                a = abc[1].cba[2].xyz.abc;
-            };
-        "};
-        diff! {"
-            func int a() {
-                abc[1].cba[2].xyz.abc[2] = 5;
-            };
-        "};
-        diff! {"
-            func int a() {
-                abc[A].cba[B].xyz.abc[C] = \"test\";
-            };
-        "};
-        diff! {"
-            func int a() {
-                b = \"test\" + 1.5;
-            };
-        "};
-        diff! {"
-            func int a() {
-                c = \"test\" + 1;
-            };
-        "};
     }
 }

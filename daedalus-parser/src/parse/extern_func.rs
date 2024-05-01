@@ -1,9 +1,5 @@
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::Token;
-use std::fmt::Write;
 
 use super::{Ident, Ty, Var};
 
@@ -13,27 +9,6 @@ pub struct ExternFunctionDefinition {
     pub ident: Ident,
     pub ty: Ty,
     pub args: Vec<Var>,
-}
-
-impl DaedalusDisplay for ExternFunctionDefinition {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        write!(f, "extern func ")?;
-        self.ty.fmt(f)?;
-        write!(f, " ")?;
-        self.ident.fmt(f)?;
-        write!(f, "(")?;
-
-        let mut iter = self.args.iter().peekable();
-        while let Some(arg) = iter.next() {
-            arg.fmt(f)?;
-            if iter.peek().is_some() {
-                write!(f, ", ")?;
-            }
-        }
-
-        writeln!(f, ");")?;
-        Ok(())
-    }
 }
 
 impl ExternFunctionDefinition {

@@ -1,9 +1,5 @@
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::{Token, TokenError};
-use std::fmt::Write;
 
 use super::{Expr, IfStatement, ReturnStatement, Var};
 
@@ -18,43 +14,6 @@ pub enum BlockItem {
 #[derive(Debug)]
 pub struct Block {
     pub items: Vec<BlockItem>,
-}
-
-impl DaedalusDisplay for Block {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        if self.items.is_empty() {
-            return write!(f, "{{}}");
-        }
-
-        writeln!(f, "{{")?;
-
-        f.push_indent();
-        for item in self.items.iter() {
-            match item {
-                BlockItem::Var(var) => {
-                    var.fmt(f)?;
-                    writeln!(f, ";")?;
-                }
-                BlockItem::If(i) => {
-                    i.fmt(f)?;
-                }
-                BlockItem::Return(ret) => {
-                    ret.fmt(f)?;
-                }
-                BlockItem::Expr(expr) => {
-                    f.write_indent()?;
-                    expr.fmt(f)?;
-                    writeln!(f, ";")?;
-                }
-            }
-        }
-        f.pop_indent();
-
-        f.write_indent()?;
-        write!(f, "}}")?;
-
-        Ok(())
-    }
 }
 
 impl Block {

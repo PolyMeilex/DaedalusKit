@@ -1,10 +1,6 @@
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::Token;
 use logos::Span;
-use std::fmt::Write;
 
 use super::{Block, Ident};
 
@@ -14,21 +10,6 @@ pub struct Instance {
     pub parent: Ident,
     pub block: Block,
     pub span: Span,
-}
-
-impl DaedalusDisplay for Instance {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        write!(f, "instance ")?;
-        self.ident.fmt(f)?;
-        write!(f, "(")?;
-        self.parent.fmt(f)?;
-        write!(f, ") ")?;
-
-        self.block.fmt(f)?;
-        writeln!(f, ";")?;
-        writeln!(f)?;
-        Ok(())
-    }
 }
 
 impl Instance {

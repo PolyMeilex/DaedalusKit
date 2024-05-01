@@ -1,21 +1,10 @@
 use daedalus_lexer::{Token, TokenError};
-use std::fmt::Write;
 
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 
 #[derive(Debug)]
 pub struct Ty {
     pub raw: String,
-}
-
-impl DaedalusDisplay for Ty {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        write!(f, "{}", self.raw)?;
-        Ok(())
-    }
 }
 
 impl Ty {

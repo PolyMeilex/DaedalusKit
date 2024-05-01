@@ -1,10 +1,6 @@
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::Token;
 use logos::Span;
-use std::fmt::Write;
 
 use super::{Block, Ident, Ty, Var};
 
@@ -15,30 +11,6 @@ pub struct FunctionDefinition {
     pub args: Vec<Var>,
     pub block: Block,
     pub span: Span,
-}
-
-impl DaedalusDisplay for FunctionDefinition {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        write!(f, "func ")?;
-        self.ty.fmt(f)?;
-        write!(f, " ")?;
-        self.ident.fmt(f)?;
-        write!(f, "(")?;
-
-        let mut iter = self.args.iter().peekable();
-        while let Some(arg) = iter.next() {
-            arg.fmt(f)?;
-            if iter.peek().is_some() {
-                write!(f, ", ")?;
-            }
-        }
-
-        write!(f, ") ")?;
-        self.block.fmt(f)?;
-        writeln!(f, ";")?;
-        writeln!(f)?;
-        Ok(())
-    }
 }
 
 impl FunctionDefinition {

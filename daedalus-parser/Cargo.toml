@@ -13,5 +13,4 @@ thiserror.workspace = true
 src-file.workspace = true
 
 [dev-dependencies]
-indoc = "2"
-pretty_assertions = "1.4.0"
+indoc.workspace = true

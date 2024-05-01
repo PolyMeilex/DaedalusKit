@@ -1,10 +1,7 @@
 use daedalus_lexer::{DaedalusLexer, Token, TokenError};
-use std::{backtrace::Backtrace, fmt::Write};
+use std::backtrace::Backtrace;
 
-use crate::{
-    fmt::{DaedalusDisplay, DaedalusFormatter},
-    DaedalusParser, ParseError,
-};
+use crate::{DaedalusParser, ParseError};
 
 use super::{FunctionCall, Ident};
 
@@ -237,63 +234,6 @@ pub enum ExprKind {
 #[derive(Debug)]
 pub struct Expr {
     pub kind: ExprKind,
-}
-
-impl DaedalusDisplay for Expr {
-    fn fmt(&self, f: &mut DaedalusFormatter) -> std::fmt::Result {
-        match &self.kind {
-            ExprKind::Binary(op, left, right) => {
-                left.fmt(f)?;
-                write!(f, " {} ", op.as_str())?;
-                right.fmt(f)?;
-            }
-            ExprKind::Unary(op, v) => {
-                match op {
-                    UnaryOp::Not => write!(f, "!")?,
-                    UnaryOp::Negative => write!(f, "-")?,
-                }
-                v.fmt(f)?;
-            }
-            ExprKind::Lit(Lit {
-                kind: LitKind::String(lit),
-            }) => {
-                write!(f, "\"{}\"", lit)?;
-            }
-            ExprKind::Lit(Lit {
-                kind: LitKind::Intager(lit),
-            }) => {
-                write!(f, "{}", lit)?;
-            }
-            ExprKind::Lit(Lit {
-                kind: LitKind::Float(lit),
-            }) => {
-                write!(f, "{}", lit)?;
-            }
-            ExprKind::Call(call) => {
-                call.fmt(f)?;
-            }
-            ExprKind::Ident(i) => {
-                i.fmt(f)?;
-            }
-            ExprKind::Paren(p) => {
-                write!(f, "(")?;
-                p.fmt(f)?;
-                write!(f, ")")?;
-            }
-            ExprKind::Field(obj, field) => {
-                obj.fmt(f)?;
-                write!(f, ".")?;
-                field.fmt(f)?;
-            }
-            ExprKind::Index(a, b) => {
-                a.fmt(f)?;
-                write!(f, "[")?;
-                b.fmt(f)?;
-                write!(f, "]")?;
-            }
-        }
-        Ok(())
-    }
 }
 
 impl Expr {
