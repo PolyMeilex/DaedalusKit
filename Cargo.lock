@@ -115,12 +115,9 @@ dependencies = [
 name = "daedalus-parser"
 version = "0.1.0"
 dependencies = [
- "codespan-reporting",
  "daedalus-lexer",
- "encoding_rs",
  "indoc",
  "logos",
- "src-file",
  "thiserror",
 ]
 
