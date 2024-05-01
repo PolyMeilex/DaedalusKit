@@ -7,6 +7,7 @@ members = [
   "daedalus-lexer",
   "daedalus-parser",
   "dat-file",
+  "interner",
   "output-units",
   "src-file",
   "zstring",

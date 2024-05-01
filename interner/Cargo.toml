@@ -1,0 +1,8 @@
+[package]
+name = "interner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+unicase.workspace = true
+rustc-hash.workspace = true
