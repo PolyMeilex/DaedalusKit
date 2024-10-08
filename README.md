@@ -19,3 +19,4 @@ Daedalus was used to develop cult classic like [Gothic](https://en.wikipedia.org
   - `daedalus-bytecode` - Representation of the bytecode format ✅
   - `dat-file` - Implementation of the file format used to store the bytecode and symbol definitions ✅
 - `interner` - String interner with support for case insetive interning needed for Daedalus
+- `daedalus-lsp` - Modern language server (not even started, only planed so far)
