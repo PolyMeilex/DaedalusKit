@@ -2,8 +2,8 @@ use const_eval::Value;
 use daedalus_bytecode::{Bytecode, Instruction};
 use daedalus_parser::{AssocOp, BlockItem, Expr, ExprKind, FunctionCall, Ident, LitKind};
 use dat_file::{
-    properties::{DataType, PropFlag, SymbolCodeSpan},
     DatFile, SymbolData,
+    properties::{DataType, PropFlag, SymbolCodeSpan},
 };
 use std::{io::Cursor, str::FromStr};
 use zstring::ZString;
@@ -186,10 +186,6 @@ impl Compiler {
                     (span.start as u32, span.end as u32 - span.start as u32 + 2),
                 );
 
-                let address = self.bytecode.next_available_address();
-
-                let this = self.symbol_table.instance(ident, span, address, parent_id);
-
                 let prototype = if parent_kind == SymbolKind::Prototype {
                     let parent_symbol = &self.symbol_table.symbols[parent_id as usize];
 
@@ -218,17 +214,19 @@ impl Compiler {
 
                 let mut block = self.bytecode.block_builder();
 
+                self.symbol_table
+                    .instance(ident, span, block.addr(), parent_id);
+
                 if let Some((_, addr)) = prototype.as_ref() {
                     block.call(*addr);
                 }
 
-                let mut builder = BlockBuilder {
+                let builder = BlockBuilder {
                     parent: if let Some((parent, _)) = prototype.as_ref() {
                         parent
                     } else {
                         &parent
                     },
-                    this,
                     symbol_indices: &self.symbol_indices,
                     symbol_table: &mut self.symbol_table,
                     block: &mut block,
@@ -238,7 +236,8 @@ impl Compiler {
             }
 
             daedalus_parser::Item::Func(func) => {
-                let ident = ZString::from(func.ident.raw.to_ascii_uppercase().as_bytes());
+                let ident_utf8 = func.ident.raw.to_ascii_uppercase();
+                let ident = ZString::from(ident_utf8.as_bytes());
                 let span = &func.span;
 
                 let line_start = files.line_index(file_id, span.start as u32).0;
@@ -250,14 +249,19 @@ impl Compiler {
                     (span.start as u32, span.end as u32 - span.start as u32 + 2),
                 );
 
-                let address = {
-                    let mut block = self.bytecode.block_builder();
-                    block.ret();
-                    block.addr()
-                };
+                let mut block = self.bytecode.block_builder();
 
                 self.symbol_table
-                    .func(ident, span, &[], DataType::Void, address);
+                    .func(ident, span, &[], DataType::Void, block.addr());
+
+                let builder = BlockBuilder {
+                    parent: &ident_utf8,
+                    symbol_indices: &self.symbol_indices,
+                    symbol_table: &mut self.symbol_table,
+                    block: &mut block,
+                };
+
+                builder.visit_function(func);
             }
             daedalus_parser::Item::Const(item) => {
                 let name = ZString::from(item.ident.raw.as_bytes().to_ascii_uppercase());
@@ -296,15 +300,13 @@ impl Compiler {
                     (span.start as u32, span.end as u32 - span.start as u32 + 2),
                 );
 
-                let address = self.bytecode.next_available_address();
-
-                let this = self.symbol_table.prototype(ident, span, address, parent_id);
-
                 let mut block = self.bytecode.block_builder();
 
-                let mut builder = BlockBuilder {
+                self.symbol_table
+                    .prototype(ident, span, block.addr(), parent_id);
+
+                let builder = BlockBuilder {
                     parent: &parent,
-                    this,
                     symbol_indices: &self.symbol_indices,
                     symbol_table: &mut self.symbol_table,
                     block: &mut block,
@@ -332,27 +334,34 @@ impl Compiler {
 
 struct BlockBuilder<'a, 'b> {
     parent: &'a str,
-    this: u32,
     symbol_indices: &'a SymbolIndices,
     symbol_table: &'a mut DatSymbolTable,
     block: &'a mut daedalus_bytecode::BytecodeBlockBuilder<'b>,
 }
 
 impl<'a, 'b> BlockBuilder<'a, 'b> {
-    fn visit_instance(&mut self, instance: &daedalus_parser::Instance) {
+    fn visit_instance(mut self, instance: &daedalus_parser::Instance) {
         for item in instance.block.items.iter() {
             self.visit_block_item(item);
         }
 
-        self.block.ret();
+        self.close(&instance.block);
     }
 
-    fn visit_prototype(&mut self, prototype: &daedalus_parser::Prototype) {
+    fn visit_prototype(mut self, prototype: &daedalus_parser::Prototype) {
         for item in prototype.block.items.iter() {
             self.visit_block_item(item);
         }
 
-        self.block.ret();
+        self.close(&prototype.block);
+    }
+
+    fn visit_function(mut self, function: &daedalus_parser::FunctionDefinition) {
+        for item in function.block.items.iter() {
+            self.visit_block_item(item);
+        }
+
+        self.close(&function.block);
     }
 
     fn visit_block_item(&mut self, item: &BlockItem) {
@@ -447,14 +456,9 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
         }
     }
 
-    fn visit_reference(&self, ident: &Ident) -> SymbolIndex {
-        match ident.raw.to_ascii_uppercase().as_str() {
-            "SELF" | "THIS" => SymbolIndex {
-                id: self.this,
-                kind: SymbolKind::Instance,
-            },
-            ident => *self.symbol_indices.get(ident).expect("TODO"),
-        }
+    fn visit_reference(&self, ident: &Ident) -> &SymbolIndex {
+        let name = ident.raw.to_ascii_uppercase();
+        self.symbol_indices.get(&name).expect("TODO")
     }
 
     fn visit_call_arg(&mut self, arg: &Expr) {
@@ -511,6 +515,12 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
                 self.block.extend(&[Instruction::call(symbol.id)]);
             }
             kind => todo!("{kind:?}"),
+        }
+    }
+
+    fn close(self, block: &daedalus_parser::Block) {
+        if block.is_implicit_return() {
+            self.block.ret();
         }
     }
 }

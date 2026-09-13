@@ -1,5 +1,8 @@
 use std::io::Cursor;
 
+use daedalus_bytecode::Instruction;
+use dat_file::{DatFile, Symbol, SymbolData};
+
 fn main() {
     // /home/poly/Gothic2/_work/Data/Scripts/_compiled/CAMERA.DAT
     let path = std::env::args().nth(1).unwrap();

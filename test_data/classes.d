@@ -37,3 +37,23 @@ class C_NPC {
 	var int bodystateinterruptableoverride;
 	var int nofocus;
 };
+
+instance SELF(C_NPC)
+{
+};
+
+instance OTHER(C_NPC)
+{
+};
+
+instance VICTIM(C_NPC)
+{
+};
+
+// instance ITEM(C_ITEM)
+// {
+// };
+
+instance HERO(C_NPC)
+{
+};
