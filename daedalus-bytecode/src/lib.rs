@@ -15,6 +15,10 @@ impl Bytecode {
         }
     }
 
+    pub fn from_bytes(bytecode: Vec<u8>) -> Self {
+        Self { bytecode }
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytecode
     }
@@ -87,6 +91,11 @@ impl<'a> BytecodeBlockBuilder<'a> {
         self
     }
 
+    pub fn call(&mut self, symbol: u32) -> &mut Self {
+        self.encode(&Instruction::call(symbol));
+        self
+    }
+
     pub fn ret(&mut self) -> &mut Self {
         self.encode(&Instruction::ret());
         self
@@ -111,6 +120,18 @@ impl<'a> BytecodeBlockBuilder<'a> {
             self.encode(&Instruction::push_var_array(array_symbol, id));
         }
         self.encode(&Instruction::mov_int());
+        self
+    }
+
+    pub fn var_assign_float(&mut self, (array_symbol, id): (u32, u8), value: f32) -> &mut Self {
+        let value = i32::from_le_bytes(value.to_le_bytes());
+        self.encode(&Instruction::push_int(value));
+        if id == 0 {
+            self.encode(&Instruction::push_var(array_symbol));
+        } else {
+            self.encode(&Instruction::push_var_array(array_symbol, id));
+        }
+        self.encode(&Instruction::mov_float());
         self
     }
 
@@ -201,6 +222,13 @@ impl Instruction {
     pub fn mov_int() -> Self {
         Self {
             opcode: Opcode::MovInt,
+            data: InstructionData::None,
+        }
+    }
+
+    pub fn mov_float() -> Self {
+        Self {
+            opcode: Opcode::MovF,
             data: InstructionData::None,
         }
     }
