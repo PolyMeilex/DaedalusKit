@@ -47,7 +47,7 @@ impl<'a> Files<'a> {
         self.len += 1;
         let id = FileId {
             inner: self.inner.add(name, source),
-            id: self.len as u32 - 1,
+            id: self.len as u32,
         };
 
         let ast = daedalus_parser::File::parse(&mut DaedalusParser {
