@@ -234,15 +234,7 @@ impl Compiler {
                     block: &mut block,
                 };
 
-                // attribute[0] = 20
-                // attribute[1] = 40
-                // Mdl_SetVisual(self, "HUMANS.MDS")
-                // Mdl_SetVisualBody(self, "hum_body_Naked0", 9, 0, "Hum_Head_Pony", 18, 0, -1);
-                for item in instance.block.items.iter() {
-                    builder.visit_block_item(item);
-                }
-
-                block.ret();
+                builder.visit_instance(instance);
             }
 
             daedalus_parser::Item::Func(func) => {
@@ -318,11 +310,7 @@ impl Compiler {
                     block: &mut block,
                 };
 
-                for item in prototype.block.items.iter() {
-                    builder.visit_block_item(item);
-                }
-
-                block.ret();
+                builder.visit_prototype(prototype);
             }
             got => todo!("Got: {got:?}"),
         }
@@ -351,6 +339,22 @@ struct BlockBuilder<'a, 'b> {
 }
 
 impl<'a, 'b> BlockBuilder<'a, 'b> {
+    fn visit_instance(&mut self, instance: &daedalus_parser::Instance) {
+        for item in instance.block.items.iter() {
+            self.visit_block_item(item);
+        }
+
+        self.block.ret();
+    }
+
+    fn visit_prototype(&mut self, prototype: &daedalus_parser::Prototype) {
+        for item in prototype.block.items.iter() {
+            self.visit_block_item(item);
+        }
+
+        self.block.ret();
+    }
+
     fn visit_block_item(&mut self, item: &BlockItem) {
         match item {
             BlockItem::Expr(expr) => self.visit_expr(expr),
