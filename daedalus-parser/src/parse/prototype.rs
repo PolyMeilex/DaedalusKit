@@ -1,5 +1,6 @@
 use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::Token;
+use logos::Span;
 
 use super::{Block, Ident};
 
@@ -8,11 +9,13 @@ pub struct Prototype {
     pub ident: Ident,
     pub parent: Ident,
     pub block: Block,
+    pub span: Span,
 }
 
 impl Prototype {
     pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
         ctx.lexer.eat_token(Token::Prototype)?;
+        let start = ctx.lexer.span().start;
 
         let ident = Ident::parse(ctx)?;
 
@@ -25,11 +28,13 @@ impl Prototype {
         let block = Block::parse(ctx)?;
 
         ctx.lexer.eat_token(Token::Semi)?;
+        let end = ctx.lexer.span().end;
 
         Ok(Self {
             ident,
             parent,
             block,
+            span: start..end,
         })
     }
 }
