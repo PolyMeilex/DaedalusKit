@@ -141,7 +141,7 @@ impl Compiler {
                                         let value = self
                                             .const_values
                                             .map
-                                            .get(&ident.raw.to_uppercase())
+                                            .get(&ident.raw.to_ascii_uppercase())
                                             .expect("TODO");
 
                                         if let Value::Int(v) = value {
@@ -171,7 +171,7 @@ impl Compiler {
 
             daedalus_parser::Item::Instance(instance) => {
                 let ident = ZString::from(instance.ident.raw.as_bytes().to_ascii_uppercase());
-                let parent = instance.parent.raw.to_uppercase();
+                let parent = instance.parent.raw.to_ascii_uppercase();
                 let parent_data = self.symbol_indices.get(&parent).expect("TODO");
                 let parent_kind = parent_data.kind;
                 let parent_id = parent_data.id;
@@ -238,7 +238,7 @@ impl Compiler {
             }
 
             daedalus_parser::Item::Func(func) => {
-                let ident = ZString::from(func.ident.raw.to_uppercase().as_bytes());
+                let ident = ZString::from(func.ident.raw.to_ascii_uppercase().as_bytes());
                 let span = &func.span;
 
                 let line_start = files.line_index(file_id, span.start as u32).0;
@@ -276,14 +276,14 @@ impl Compiler {
                 let value = self
                     .const_values
                     .map
-                    .get(&item.ident.raw.to_uppercase())
+                    .get(&item.ident.raw.to_ascii_uppercase())
                     .expect("TODO");
 
                 self.symbol_table.const_item(name, span, value);
             }
             daedalus_parser::Item::Prototype(prototype) => {
                 let ident = ZString::from(prototype.ident.raw.as_bytes().to_ascii_uppercase());
-                let parent = prototype.parent.raw.to_uppercase();
+                let parent = prototype.parent.raw.to_ascii_uppercase();
                 let parent_id = self.symbol_indices.get(&parent).expect("TODO").id;
                 let span = &prototype.span;
 
@@ -448,7 +448,7 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
     }
 
     fn visit_reference(&self, ident: &Ident) -> SymbolIndex {
-        match ident.raw.to_uppercase().as_str() {
+        match ident.raw.to_ascii_uppercase().as_str() {
             "SELF" | "THIS" => SymbolIndex {
                 id: self.this,
                 kind: SymbolKind::Instance,
@@ -496,7 +496,7 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
     // Mdl_SetVisual(self, "HUMANS.MDS")
     // Mdl_SetVisualBody(self, "hum_body_Naked0", 9, 0, "Hum_Head_Pony", 18, 0, -1);
     fn visit_call(&mut self, call: &FunctionCall) {
-        let ident = call.ident.raw.to_uppercase();
+        let ident = call.ident.raw.to_ascii_uppercase();
 
         for arg in call.args.iter() {
             self.visit_call_arg(arg);

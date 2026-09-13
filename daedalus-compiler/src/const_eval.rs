@@ -60,7 +60,7 @@ impl ConstValues {
             for item in file.ast.items.iter() {
                 if let daedalus_parser::Item::Const(item) = item {
                     let value = eval.visit_const(item);
-                    map.insert(item.ident.raw.to_uppercase(), value);
+                    map.insert(item.ident.raw.to_ascii_uppercase(), value);
                 }
             }
         }
@@ -140,9 +140,9 @@ impl<'a> ConstEvaluator<'a> {
             },
             ExprKind::Call(_) => todo!(),
             ExprKind::Ident(ident) => {
-                if let Some(ref_item) = self.map.map.get(ident.raw.to_uppercase().as_str()) {
+                if let Some(ref_item) = self.map.map.get(ident.raw.to_ascii_uppercase().as_str()) {
                     self.visit_const(ref_item)
-                } else if let Some(symbol) = self.indices.get(&ident.raw.to_uppercase()) {
+                } else if let Some(symbol) = self.indices.get(&ident.raw.to_ascii_uppercase()) {
                     Value::Symbol(symbol.id)
                 } else {
                     todo!()

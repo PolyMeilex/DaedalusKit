@@ -47,41 +47,41 @@ impl SymbolIndices {
     fn handle_item(&mut self, item: &daedalus_parser::Item) {
         match item {
             daedalus_parser::Item::ExternFunc(item) => {
-                let ident = item.ident.raw.to_uppercase();
+                let ident = item.ident.raw.to_ascii_uppercase();
                 self.push_symbol(ident.clone(), SymbolKind::ExternFunction);
 
                 for var in item.args.iter() {
                     self.push_symbol(
-                        format!("{}.{}", ident, var.ident.raw.to_uppercase()),
+                        format!("{}.{}", ident, var.ident.raw.to_ascii_uppercase()),
                         SymbolKind::FunctionArg,
                     );
                 }
             }
             daedalus_parser::Item::Class(item) => {
-                let ident = item.ident.raw.to_uppercase();
+                let ident = item.ident.raw.to_ascii_uppercase();
                 self.push_symbol(ident.clone(), SymbolKind::Class);
 
                 for var in item.fields.iter() {
                     self.push_symbol(
-                        format!("{}.{}", ident, var.ident.raw.to_uppercase()),
+                        format!("{}.{}", ident, var.ident.raw.to_ascii_uppercase()),
                         SymbolKind::ClassVar,
                     );
                 }
             }
             daedalus_parser::Item::Instance(item) => {
-                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Instance);
+                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Instance);
             }
             daedalus_parser::Item::Func(item) => {
-                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Function);
+                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Function);
             }
             daedalus_parser::Item::Const(item) => {
-                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Const);
+                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Const);
             }
             daedalus_parser::Item::Var(item) => {
-                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Var);
+                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Var);
             }
             daedalus_parser::Item::Prototype(item) => {
-                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Prototype);
+                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Prototype);
             }
         }
     }

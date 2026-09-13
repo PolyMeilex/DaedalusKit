@@ -25,14 +25,14 @@ where
 
     fn get(&self, key: K) -> Option<&V> {
         match self {
-            Self::Insensitive(map) => map.get(&UniCase::new(key)),
+            Self::Insensitive(map) => map.get(&UniCase::ascii(key)),
             Self::Sensitive(map) => map.get(&key),
         }
     }
 
     fn insert(&mut self, key: K, v: V) {
         match self {
-            Self::Insensitive(map) => map.insert(UniCase::new(key), v),
+            Self::Insensitive(map) => map.insert(UniCase::ascii(key), v),
             Self::Sensitive(map) => map.insert(key, v),
         };
     }
@@ -63,7 +63,7 @@ impl Interner {
         let buff = if self.map.is_case_sensitive() {
             v.to_string()
         } else {
-            v.to_uppercase()
+            v.to_ascii_uppercase()
         };
 
         let idx = Interned(self.list.len() as u32);

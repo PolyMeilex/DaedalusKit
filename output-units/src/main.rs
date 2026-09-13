@@ -60,7 +60,7 @@ fn load_file<'a>(
                 lexer.eat_token(Token::Class)?;
                 let ident = lexer.eat_token(Token::Ident)?;
 
-                if ident.to_uppercase() != "C_SVM" {
+                if !ident.eq_ignore_ascii_case("C_SVM") {
                     continue;
                 }
 
@@ -89,7 +89,7 @@ fn load_file<'a>(
             Token::Ident => {
                 let ident = lexer.eat_token(Token::Ident)?;
 
-                if ident.to_uppercase() != "AI_OUTPUT" {
+                if !ident.eq_ignore_ascii_case("AI_OUTPUT") {
                     continue;
                 }
 
@@ -102,7 +102,7 @@ fn load_file<'a>(
                 let ident = lexer.eat_token(Token::Ident)?;
                 lexer.eat_token(Token::CloseParen).unwrap();
 
-                if ident.to_uppercase() != "C_SVM" {
+                if !ident.eq_ignore_ascii_case("C_SVM") {
                     continue;
                 }
 
