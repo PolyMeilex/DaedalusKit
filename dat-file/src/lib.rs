@@ -538,9 +538,15 @@ pub fn debug_print(dat: &DatFile) {
     println!("count: {}", dat.symbols.len());
     // println!("sorted: {:?}", dat.sort_indexes);
 
+    let mut non_ascii = Vec::new();
+
     // Read symbols
     for (sym_index, symbol) in dat.symbols.iter().enumerate() {
         if let Some(name) = symbol.name.as_ref() {
+            if !name.is_ascii() && !name.starts_with(b"\xFF") {
+                non_ascii.push(symbol);
+            }
+
             println!("- {name}");
         } else {
             println!("- ?");
@@ -600,4 +606,8 @@ pub fn debug_print(dat: &DatFile) {
     }
 
     println!();
+
+    for symbol in non_ascii {
+        println!("non_ascii: {}", symbol.name.as_ref().unwrap());
+    }
 }
