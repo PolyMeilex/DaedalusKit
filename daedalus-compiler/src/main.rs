@@ -2,8 +2,8 @@ use const_eval::Value;
 use daedalus_bytecode::{Bytecode, Instruction};
 use daedalus_parser::{AssocOp, BlockItem, Expr, ExprKind, FunctionCall, Ident, LitKind};
 use dat_file::{
-    properties::{DataType, SymbolCodeSpan},
-    DatFile,
+    properties::{DataType, PropFlag, SymbolCodeSpan},
+    DatFile, SymbolData,
 };
 use std::{io::Cursor, str::FromStr};
 use zstring::ZString;
@@ -159,13 +159,22 @@ impl Compiler {
                     })
                     .collect();
 
-                self.symbol_table.class(name, span, &fields, 800, 288);
+                // TODO: Proper full map of those addresses
+                if name.as_slice() == b"CCAMSYS" {
+                    self.symbol_table.class(name, span, &fields, 92, 0);
+                } else if name.as_slice() == b"C_NPC" {
+                    self.symbol_table.class(name, span, &fields, 800, 288);
+                } else {
+                    todo!("{name}");
+                }
             }
 
             daedalus_parser::Item::Instance(instance) => {
                 let ident = ZString::from(instance.ident.raw.as_bytes().to_ascii_uppercase());
                 let parent = instance.parent.raw.to_uppercase();
-                let parent_id = self.symbol_indices.get(&parent).expect("TODO").id;
+                let parent_data = self.symbol_indices.get(&parent).expect("TODO");
+                let parent_kind = parent_data.kind;
+                let parent_id = parent_data.id;
                 let span = &instance.span;
 
                 let line_start = files.line_index(file_id, span.start as u32).0;
@@ -181,137 +190,44 @@ impl Compiler {
 
                 let this = self.symbol_table.instance(ident, span, address, parent_id);
 
-                struct BlockBuilder<'a, 'b> {
-                    parent: &'a str,
-                    this: u32,
-                    symbol_indices: &'a SymbolIndices,
-                    symbol_table: &'a mut DatSymbolTable,
-                    block: &'a mut daedalus_bytecode::BytecodeBlockBuilder<'b>,
-                }
+                let prototype = if parent_kind == SymbolKind::Prototype {
+                    let parent_symbol = &self.symbol_table.symbols[parent_id as usize];
 
-                impl<'a, 'b> BlockBuilder<'a, 'b> {
-                    fn visit_block_item(&mut self, item: &BlockItem) {
-                        match item {
-                            BlockItem::Expr(expr) => self.visit_expr(expr),
-                            _ => todo!(),
-                        }
+                    let Some(class_id) = parent_symbol.parent else {
+                        todo!(" Prototype must have a parent");
+                    };
+
+                    let Some((class_name, class)) =
+                        self.symbol_indices.iter().find(|(_, v)| v.id == class_id)
+                    else {
+                        todo!("Missing parent symbol");
+                    };
+
+                    if class.kind != SymbolKind::Class {
+                        todo!("Multi level inheritance not implemented: {class:#?}");
                     }
 
-                    fn visit_expr(&mut self, expr: &Expr) {
-                        match &expr.kind {
-                            ExprKind::Binary(op, left, right) => {
-                                self.visit_binary_op(op, left, right)
-                            }
-                            ExprKind::Call(call) => self.visit_call(call),
-                            _ => todo!(),
-                        }
-                    }
+                    let SymbolData::Address(addr) = parent_symbol.data else {
+                        todo!()
+                    };
 
-                    fn visit_binary_op(&mut self, op: &AssocOp, left: &Expr, right: &Expr) {
-                        assert_eq!(*op, AssocOp::Assign);
-
-                        let ExprKind::Index(symbol, id) = &left.kind else {
-                            todo!()
-                        };
-
-                        let ExprKind::Ident(symbol) = &symbol.kind else {
-                            todo!()
-                        };
-                        let symbol = symbol.raw.to_uppercase();
-                        let symbol = format!("{}.{symbol}", self.parent);
-
-                        let ExprKind::Lit(id) = &id.kind else { todo!() };
-                        let LitKind::Intager(id) = id.kind else {
-                            todo!()
-                        };
-                        let id = u8::try_from(id).expect("TODO");
-
-                        let ExprKind::Lit(value) = &right.kind else {
-                            todo!()
-                        };
-                        let LitKind::Intager(value) = value.kind else {
-                            todo!()
-                        };
-
-                        // "C_NPC.ATTRIBUTE"
-                        let npc_attributes = self.symbol_indices.get(&symbol).unwrap().id;
-
-                        self.block.var_assign_int((npc_attributes, id), value);
-                    }
-
-                    fn visit_reference(&self, ident: &Ident) -> SymbolIndex {
-                        match ident.raw.to_uppercase().as_str() {
-                            "SELF" | "THIS" => SymbolIndex {
-                                id: self.this,
-                                kind: SymbolKind::Instance,
-                            },
-                            ident => *self.symbol_indices.get(ident).expect("TODO"),
-                        }
-                    }
-
-                    fn visit_call_arg(&mut self, arg: &Expr) {
-                        match &arg.kind {
-                            ExprKind::Ident(arg) => {
-                                let symbol = self.visit_reference(arg);
-                                self.block.push_instruction(
-                                    if SymbolKind::Instance == symbol.kind {
-                                        Instruction::push_var_instance(symbol.id)
-                                    } else {
-                                        Instruction::push_var(symbol.id)
-                                    },
-                                );
-                            }
-                            ExprKind::Lit(lit) => match &lit.kind {
-                                LitKind::Intager(v) => {
-                                    self.block.push_instruction(Instruction::push_int(v.abs()));
-                                    if v.is_negative() {
-                                        self.block.push_instruction(Instruction::negate());
-                                    }
-                                }
-                                LitKind::Float(v) => {
-                                    // Well that's fun, it turns out floats were ints all along
-                                    let v = v.to_le_bytes();
-                                    let v = i32::from_le_bytes(v);
-                                    self.block.push_instruction(Instruction::push_int(v));
-                                }
-                                LitKind::String(v) => {
-                                    self.block.push_instruction(Instruction::push_var(
-                                        self.symbol_table.string(ZString::from(v.as_bytes())),
-                                    ));
-                                }
-                            },
-                            _ => {
-                                todo!()
-                            }
-                        };
-                    }
-
-                    // Mdl_SetVisual(self, "HUMANS.MDS")
-                    // Mdl_SetVisualBody(self, "hum_body_Naked0", 9, 0, "Hum_Head_Pony", 18, 0, -1);
-                    fn visit_call(&mut self, call: &FunctionCall) {
-                        let ident = call.ident.raw.to_uppercase();
-
-                        for arg in call.args.iter() {
-                            self.visit_call_arg(arg);
-                        }
-
-                        let symbol = self.symbol_indices.get(&ident).unwrap();
-                        match symbol.kind {
-                            SymbolKind::ExternFunction => {
-                                self.block.extend(&[Instruction::call_extern(symbol.id)]);
-                            }
-                            SymbolKind::Function => {
-                                self.block.extend(&[Instruction::call(symbol.id)]);
-                            }
-                            kind => todo!("{kind:?}"),
-                        }
-                    }
-                }
+                    Some((class_name, u32::try_from(addr).expect("TODO")))
+                } else {
+                    None
+                };
 
                 let mut block = self.bytecode.block_builder();
 
+                if let Some((_, addr)) = prototype.as_ref() {
+                    block.call(*addr);
+                }
+
                 let mut builder = BlockBuilder {
-                    parent: &parent,
+                    parent: if let Some((parent, _)) = prototype.as_ref() {
+                        parent
+                    } else {
+                        &parent
+                    },
                     this,
                     symbol_indices: &self.symbol_indices,
                     symbol_table: &mut self.symbol_table,
@@ -373,6 +289,41 @@ impl Compiler {
 
                 self.symbol_table.const_item(name, span, value);
             }
+            daedalus_parser::Item::Prototype(prototype) => {
+                let ident = ZString::from(prototype.ident.raw.as_bytes().to_ascii_uppercase());
+                let parent = prototype.parent.raw.to_uppercase();
+                let parent_id = self.symbol_indices.get(&parent).expect("TODO").id;
+                let span = &prototype.span;
+
+                let line_start = files.line_index(file_id, span.start as u32).0;
+                let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
+
+                let span = SymbolCodeSpan::new(
+                    file_id.raw(),
+                    (line_start + 1, line_count + 1),
+                    (span.start as u32, span.end as u32 - span.start as u32 + 2),
+                );
+
+                let address = self.bytecode.next_available_address();
+
+                let this = self.symbol_table.prototype(ident, span, address, parent_id);
+
+                let mut block = self.bytecode.block_builder();
+
+                let mut builder = BlockBuilder {
+                    parent: &parent,
+                    this,
+                    symbol_indices: &self.symbol_indices,
+                    symbol_table: &mut self.symbol_table,
+                    block: &mut block,
+                };
+
+                for item in prototype.block.items.iter() {
+                    builder.visit_block_item(item);
+                }
+
+                block.ret();
+            }
             got => todo!("Got: {got:?}"),
         }
     }
@@ -388,6 +339,175 @@ impl Compiler {
         self.symbol_table.encode(&mut out);
         self.bytecode.encode(&mut out).unwrap();
         out
+    }
+}
+
+struct BlockBuilder<'a, 'b> {
+    parent: &'a str,
+    this: u32,
+    symbol_indices: &'a SymbolIndices,
+    symbol_table: &'a mut DatSymbolTable,
+    block: &'a mut daedalus_bytecode::BytecodeBlockBuilder<'b>,
+}
+
+impl<'a, 'b> BlockBuilder<'a, 'b> {
+    fn visit_block_item(&mut self, item: &BlockItem) {
+        match item {
+            BlockItem::Expr(expr) => self.visit_expr(expr),
+            _ => todo!(),
+        }
+    }
+
+    fn visit_expr(&mut self, expr: &Expr) {
+        match &expr.kind {
+            ExprKind::Binary(op, left, right) => self.visit_binary_op(op, left, right),
+            ExprKind::Call(call) => self.visit_call(call),
+            _ => todo!(),
+        }
+    }
+
+    fn visit_binary_op(&mut self, op: &AssocOp, left: &Expr, right: &Expr) {
+        assert_eq!(*op, AssocOp::Assign);
+
+        match &left.kind {
+            ExprKind::Ident(ident) => {
+                let ExprKind::Lit(value) = &right.kind else {
+                    todo!()
+                };
+
+                let symbol = ident.raw.to_ascii_uppercase();
+                let symbol = format!("{}.{symbol}", self.parent);
+
+                let destination = self.symbol_indices.get(&symbol).unwrap().id;
+
+                let destination_symbol = &self.symbol_table.symbols[destination as usize];
+                assert!(
+                    destination_symbol
+                        .props
+                        .elem_props
+                        .flags()
+                        .contains(PropFlag::CLASS_VAR),
+                    "TODO"
+                );
+
+                match destination_symbol.props.elem_props.data_type() {
+                    DataType::Void => todo!(),
+                    DataType::Float => {
+                        let value = match value.kind {
+                            LitKind::Intager(value) => value as f32,
+                            LitKind::Float(value) => value,
+                            _ => todo!(),
+                        };
+                        self.block.var_assign_float((destination, 0), value)
+                    }
+                    DataType::Int => {
+                        let value = match value.kind {
+                            LitKind::Intager(value) => value,
+                            _ => todo!(),
+                        };
+                        self.block.var_assign_int((destination, 0), value)
+                    }
+                    DataType::String => todo!(),
+                    DataType::Class => todo!(),
+                    DataType::Func => todo!(),
+                    DataType::Prototype => todo!(),
+                    DataType::Instance => todo!(),
+                };
+            }
+            ExprKind::Index(symbol, id) => {
+                let ExprKind::Ident(symbol) = &symbol.kind else {
+                    todo!()
+                };
+                let symbol = symbol.raw.to_ascii_uppercase();
+                let symbol = format!("{}.{symbol}", self.parent);
+
+                let ExprKind::Lit(id) = &id.kind else { todo!() };
+                let LitKind::Intager(id) = id.kind else {
+                    todo!()
+                };
+                let id = u8::try_from(id).expect("TODO");
+
+                let ExprKind::Lit(value) = &right.kind else {
+                    todo!()
+                };
+                let LitKind::Intager(value) = value.kind else {
+                    todo!()
+                };
+
+                // "C_NPC.ATTRIBUTE"
+                let npc_attributes = self.symbol_indices.get(&symbol).unwrap().id;
+
+                self.block.var_assign_int((npc_attributes, id), value);
+            }
+            expr => todo!("{expr:?}"),
+        }
+    }
+
+    fn visit_reference(&self, ident: &Ident) -> SymbolIndex {
+        match ident.raw.to_uppercase().as_str() {
+            "SELF" | "THIS" => SymbolIndex {
+                id: self.this,
+                kind: SymbolKind::Instance,
+            },
+            ident => *self.symbol_indices.get(ident).expect("TODO"),
+        }
+    }
+
+    fn visit_call_arg(&mut self, arg: &Expr) {
+        match &arg.kind {
+            ExprKind::Ident(arg) => {
+                let symbol = self.visit_reference(arg);
+                self.block
+                    .push_instruction(if SymbolKind::Instance == symbol.kind {
+                        Instruction::push_var_instance(symbol.id)
+                    } else {
+                        Instruction::push_var(symbol.id)
+                    });
+            }
+            ExprKind::Lit(lit) => match &lit.kind {
+                LitKind::Intager(v) => {
+                    self.block.push_instruction(Instruction::push_int(v.abs()));
+                    if v.is_negative() {
+                        self.block.push_instruction(Instruction::negate());
+                    }
+                }
+                LitKind::Float(v) => {
+                    // Well that's fun, it turns out floats were ints all along
+                    let v = v.to_le_bytes();
+                    let v = i32::from_le_bytes(v);
+                    self.block.push_instruction(Instruction::push_int(v));
+                }
+                LitKind::String(v) => {
+                    self.block.push_instruction(Instruction::push_var(
+                        self.symbol_table.string(ZString::from(v.as_bytes())),
+                    ));
+                }
+            },
+            _ => {
+                todo!()
+            }
+        };
+    }
+
+    // Mdl_SetVisual(self, "HUMANS.MDS")
+    // Mdl_SetVisualBody(self, "hum_body_Naked0", 9, 0, "Hum_Head_Pony", 18, 0, -1);
+    fn visit_call(&mut self, call: &FunctionCall) {
+        let ident = call.ident.raw.to_uppercase();
+
+        for arg in call.args.iter() {
+            self.visit_call_arg(arg);
+        }
+
+        let symbol = self.symbol_indices.get(&ident).unwrap();
+        match symbol.kind {
+            SymbolKind::ExternFunction => {
+                self.block.extend(&[Instruction::call_extern(symbol.id)]);
+            }
+            SymbolKind::Function => {
+                self.block.extend(&[Instruction::call(symbol.id)]);
+            }
+            kind => todo!("{kind:?}"),
+        }
     }
 }
 
@@ -428,11 +548,15 @@ fn main() {
         (path, std::fs::read_to_string(path).unwrap())
     }
 
-    let builtin = read_file("./test_data/builtin-gothic.d");
-    let classes = read_file("./test_data/classes.d");
-    let startup = read_file("./test_data/startup.d");
+    // let builtin = read_file("./test_data/builtin-gothic.d");
+    // let classes = read_file("./test_data/classes.d");
+    // let startup = read_file("./test_data/startup.d");
 
-    let files = [builtin, classes, startup];
+    let intern = read_file("/home/poly/Gothic2/_work/Data/Scripts/System/_Intern/Camera.d");
+    let caminst = read_file("/home/poly/Gothic2/_work/Data/Scripts/System/Camera/Caminst.d");
+
+    // let files = [builtin, classes, startup];
+    let files = [intern, caminst];
     let files: Vec<_> = files
         .iter()
         .map(|(path, src)| files_store.parse(path, src).unwrap())
