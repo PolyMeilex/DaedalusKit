@@ -6,7 +6,13 @@ use crate::files::File;
 pub enum SymbolKind {
     ExternFunction,
     Function,
+    FunctionArg,
     Instance,
+    Prototype,
+    Class,
+    ClassVar,
+    Var,
+    Const,
     Other,
 }
 
@@ -16,6 +22,7 @@ pub struct SymbolIndex {
     pub kind: SymbolKind,
 }
 
+#[derive(Debug)]
 pub struct SymbolIndices(HashMap<String, SymbolIndex>);
 
 impl std::ops::Deref for SymbolIndices {
@@ -46,18 +53,18 @@ impl SymbolIndices {
                 for var in item.args.iter() {
                     self.push_symbol(
                         format!("{}.{}", ident, var.ident.raw.to_uppercase()),
-                        SymbolKind::Other,
+                        SymbolKind::FunctionArg,
                     );
                 }
             }
             daedalus_parser::Item::Class(item) => {
                 let ident = item.ident.raw.to_uppercase();
-                self.push_symbol(ident.clone(), SymbolKind::Other);
+                self.push_symbol(ident.clone(), SymbolKind::Class);
 
                 for var in item.fields.iter() {
                     self.push_symbol(
                         format!("{}.{}", ident, var.ident.raw.to_uppercase()),
-                        SymbolKind::Other,
+                        SymbolKind::ClassVar,
                     );
                 }
             }
@@ -68,13 +75,13 @@ impl SymbolIndices {
                 self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Function);
             }
             daedalus_parser::Item::Const(item) => {
-                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Other);
+                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Const);
             }
             daedalus_parser::Item::Var(item) => {
-                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Other);
+                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Var);
             }
             daedalus_parser::Item::Prototype(item) => {
-                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Other);
+                self.push_symbol(item.ident.raw.to_uppercase(), SymbolKind::Prototype);
             }
         }
     }

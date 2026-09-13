@@ -303,8 +303,7 @@ impl Compiler {
                             SymbolKind::Function => {
                                 self.block.extend(&[Instruction::call(symbol.id)]);
                             }
-                            SymbolKind::Instance => todo!(),
-                            SymbolKind::Other => todo!(),
+                            kind => todo!("{kind:?}"),
                         }
                     }
                 }
