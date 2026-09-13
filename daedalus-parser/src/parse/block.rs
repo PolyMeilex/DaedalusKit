@@ -11,12 +11,25 @@ pub enum BlockItem {
     Expr(Expr),
 }
 
+impl BlockItem {
+    pub fn is_return(&self) -> bool {
+        matches!(self, BlockItem::Return(_))
+    }
+}
+
 #[derive(Debug)]
 pub struct Block {
     pub items: Vec<BlockItem>,
 }
 
 impl Block {
+    pub fn is_implicit_return(&self) -> bool {
+        match self.items.last() {
+            Some(last) => !last.is_return(),
+            None => true,
+        }
+    }
+
     pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
         ctx.lexer.eat_token(Token::OpenBrace)?;
 
