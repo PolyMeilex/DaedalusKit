@@ -162,12 +162,23 @@ pub enum SymbolData {
     None,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct DatFile {
     pub version: u8,
     pub sort_indexes: Vec<u32>,
     pub symbols: Vec<Symbol>,
     pub bytecode: Bytecode,
+}
+
+impl std::fmt::Debug for DatFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DatFile")
+            .field("version", &self.version)
+            .field("sort_indexes", &self.sort_indexes)
+            .field("symbols", &self.symbols)
+            .field("bytecode", &"[..]")
+            .finish()
+    }
 }
 
 impl DatFile {
