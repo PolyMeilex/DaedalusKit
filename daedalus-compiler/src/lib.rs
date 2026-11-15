@@ -9,6 +9,7 @@ mod codegen;
 mod compiler;
 mod const_eval;
 mod dat_symbol_table;
+mod encoding;
 mod error;
 mod files;
 mod span;

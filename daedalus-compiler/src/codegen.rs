@@ -3,10 +3,10 @@ use std::ops::Range;
 use daedalus_bytecode::Instruction;
 use daedalus_parser::{AssocOp, BlockItem, Expr, ExprKind, FunctionCall, Ident, Lit, LitKind};
 use dat_file::properties::{DataType, PropFlag};
-use zstring::ZString;
 
 use crate::{
     dat_symbol_table::DatSymbolTable,
+    encoding::script_string,
     error::{Error, Result},
     symbol_indices::{SymbolIndex, SymbolIndices, SymbolKind},
 };
@@ -187,7 +187,7 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
                 }
                 LitKind::String(v) => {
                     self.block.push_instruction(Instruction::push_var(
-                        self.symbol_table.string(ZString::from(v.as_bytes())),
+                        self.symbol_table.string(script_string(v)),
                     ));
                 }
             },
