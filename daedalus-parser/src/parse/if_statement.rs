@@ -1,5 +1,6 @@
 use crate::{DaedalusParser, ParseError};
 use daedalus_lexer::Token;
+use logos::Span;
 
 use super::{Block, Expr};
 
@@ -11,10 +12,18 @@ pub struct IfStatement {
     pub block: Block,
     pub condition: Option<Expr>,
     pub next: Option<Box<IfStatement>>,
+    pub span: Span,
 }
 
 impl IfStatement {
     pub fn parse(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
+        ctx.lexer.peek()?;
+        let start = {
+            let mut lexer = ctx.lexer.clone();
+            lexer.eat_any()?;
+            lexer.span().start
+        };
+
         let (has_else, has_if) = if ctx.lexer.peek()? == Token::Else {
             ctx.lexer.eat_token(Token::Else)?;
 
@@ -33,6 +42,7 @@ impl IfStatement {
         };
 
         let block = Block::parse(ctx)?;
+        let span = start..ctx.lexer.span().end;
 
         let mut next = None;
 
@@ -54,6 +64,7 @@ impl IfStatement {
             has_semi,
             condition,
             next,
+            span,
         })
     }
 }

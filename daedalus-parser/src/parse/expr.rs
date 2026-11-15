@@ -1,4 +1,5 @@
 use daedalus_lexer::{DaedalusLexer, Token, TokenError};
+use logos::Span;
 use std::backtrace::Backtrace;
 
 use crate::{DaedalusParser, ParseError};
@@ -234,6 +235,7 @@ pub enum ExprKind {
 #[derive(Debug)]
 pub struct Expr {
     pub kind: ExprKind,
+    pub span: Span,
 }
 
 impl Expr {
@@ -264,6 +266,7 @@ impl Expr {
             let res = Self::parse_with_op(ctx, right, priority + 1)?;
 
             left = Self {
+                span: left.span.start..res.span.end,
                 kind: ExprKind::Binary(op, Box::new(left), Box::new(res)),
             };
         }
@@ -273,28 +276,29 @@ impl Expr {
 
     fn parse_without_op(ctx: &mut DaedalusParser) -> Result<Self, ParseError> {
         let mut peek_lexer = ctx.lexer.clone();
-        let expr = match peek_lexer.peek()? {
+        let token = peek_lexer.peek()?;
+        let start = {
+            let mut lexer = peek_lexer.clone();
+            lexer.eat_any()?;
+            lexer.span().start
+        };
+
+        let kind = match token {
             Token::Bang => {
                 ctx.lexer.eat_token(Token::Bang)?;
                 let expr = Self::parse_without_op(ctx)?;
-                Expr {
-                    kind: ExprKind::Unary(UnaryOp::Not, Box::new(expr)),
-                }
+                ExprKind::Unary(UnaryOp::Not, Box::new(expr))
             }
             Token::Minus => {
                 ctx.lexer.eat_token(Token::Minus)?;
                 let expr = Self::parse_without_op(ctx)?;
-                Expr {
-                    kind: ExprKind::Unary(UnaryOp::Negative, Box::new(expr)),
-                }
+                ExprKind::Unary(UnaryOp::Negative, Box::new(expr))
             }
             Token::String => {
                 let raw = ctx.lexer.eat_token(Token::String)?;
-                Expr {
-                    kind: ExprKind::Lit(Lit {
-                        kind: LitKind::String(raw.to_string()),
-                    }),
-                }
+                ExprKind::Lit(Lit {
+                    kind: LitKind::String(raw.to_string()),
+                })
             }
             Token::Integer => {
                 let raw = ctx.lexer.eat_token(Token::Integer)?;
@@ -303,11 +307,9 @@ impl Expr {
                     span: ctx.lexer.span(),
                     backtrace: Backtrace::capture(),
                 })?;
-                Expr {
-                    kind: ExprKind::Lit(Lit {
-                        kind: LitKind::Intager(value),
-                    }),
-                }
+                ExprKind::Lit(Lit {
+                    kind: LitKind::Intager(value),
+                })
             }
             Token::Float => {
                 let raw = ctx.lexer.eat_token(Token::Float)?;
@@ -318,39 +320,29 @@ impl Expr {
                         span: ctx.lexer.span(),
                         backtrace: Backtrace::capture(),
                     })?;
-                Expr {
-                    kind: ExprKind::Lit(Lit {
-                        kind: LitKind::Float(value),
-                    }),
-                }
+                ExprKind::Lit(Lit {
+                    kind: LitKind::Float(value),
+                })
             }
             Token::Ident => {
                 peek_lexer.eat_token(Token::Ident)?;
 
-                let expr = match peek_lexer.peek()? {
-                    Token::OpenParen => {
-                        let call = FunctionCall::parse(ctx)?;
-                        Expr {
-                            kind: ExprKind::Call(call),
-                        }
-                    }
-                    _ => {
-                        let ident = Ident::parse(ctx)?;
-                        Expr {
-                            kind: ExprKind::Ident(ident),
-                        }
-                    }
+                let kind = match peek_lexer.peek()? {
+                    Token::OpenParen => ExprKind::Call(FunctionCall::parse(ctx)?),
+                    _ => ExprKind::Ident(Ident::parse(ctx)?),
                 };
 
-                Self::parse_reference(ctx, expr)?
+                let expr = Expr {
+                    kind,
+                    span: start..ctx.lexer.span().end,
+                };
+                return Self::parse_reference(ctx, expr);
             }
             Token::OpenParen => {
                 ctx.lexer.eat_token(Token::OpenParen)?;
                 let expr = Expr::parse(ctx)?;
                 ctx.lexer.eat_token(Token::CloseParen)?;
-                Expr {
-                    kind: ExprKind::Paren(Box::new(expr)),
-                }
+                ExprKind::Paren(Box::new(expr))
             }
             got => {
                 peek_lexer.eat_any()?;
@@ -358,7 +350,10 @@ impl Expr {
             }
         };
 
-        Ok(expr)
+        Ok(Expr {
+            kind,
+            span: start..ctx.lexer.span().end,
+        })
     }
 
     pub fn parse_reference(
@@ -388,6 +383,7 @@ impl Expr {
         ctx.lexer.eat_token(Token::CloseBracket)?;
 
         Ok(Expr {
+            span: parent_expr.span.start..ctx.lexer.span().end,
             kind: ExprKind::Index(Box::new(parent_expr), Box::new(index)),
         })
     }
@@ -399,6 +395,7 @@ impl Expr {
         ctx.lexer.eat_token(Token::Dot)?;
         let ident = Ident::parse(ctx)?;
         Ok(Expr {
+            span: parent_expr.span.start..ctx.lexer.span().end,
             kind: ExprKind::Field(Box::new(parent_expr), ident),
         })
     }
@@ -409,6 +406,40 @@ mod tests {
     use super::*;
     use daedalus_lexer::DaedalusLexer;
     use indoc::indoc;
+
+    fn parse(src: &str) -> Expr {
+        Expr::parse(&mut DaedalusParser {
+            lexer: &mut DaedalusLexer::new(src),
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn spans() {
+        let src = "  a + foo(1)[2].b";
+        let expr = parse(src);
+        assert_eq!(&src[expr.span.clone()], "a + foo(1)[2].b");
+
+        let ExprKind::Binary(_, left, right) = &expr.kind else {
+            panic!("{expr:?}");
+        };
+        assert_eq!(&src[left.span.clone()], "a");
+        assert_eq!(&src[right.span.clone()], "foo(1)[2].b");
+
+        let ExprKind::Field(indexed, field) = &right.kind else {
+            panic!("{right:?}");
+        };
+        assert_eq!(&src[indexed.span.clone()], "foo(1)[2]");
+        assert_eq!(&src[field.span.clone()], "b");
+
+        let src = "-(1 + 2)";
+        let expr = parse(src);
+        assert_eq!(&src[expr.span.clone()], src);
+        let ExprKind::Unary(_, paren) = &expr.kind else {
+            panic!("{expr:?}");
+        };
+        assert_eq!(&src[paren.span.clone()], "(1 + 2)");
+    }
 
     #[test]
     #[ignore]
