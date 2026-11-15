@@ -370,20 +370,24 @@ pub mod properties {
         const D: u32 = 0b00000000010000000000000000000000; // u1  |22
         const E: u32 = 0b11111111100000000000000000000000; // u9  |23
 
+        fn set_bits(&mut self, mask: u32, shift: u32, v: u32) {
+            self.0 = (self.0 & !mask) | ((v << shift) & mask);
+        }
+
         pub fn set_count(&mut self, v: u32) {
-            self.0 |= v & Self::A;
+            self.set_bits(Self::A, 0, v);
         }
         pub fn set_data_type_raw(&mut self, v: u32) {
-            self.0 |= (v << 12) & Self::B;
+            self.set_bits(Self::B, 12, v);
         }
         pub fn set_flags_raw(&mut self, v: u32) {
-            self.0 |= (v << 16) & Self::C;
+            self.set_bits(Self::C, 16, v);
         }
         pub fn set_space(&mut self, v: u32) {
-            self.0 |= (v << 22) & Self::D;
+            self.set_bits(Self::D, 22, v);
         }
         pub fn set_reserved(&mut self, v: u32) {
-            self.0 |= (v << 23) & Self::E;
+            self.set_bits(Self::E, 23, v);
         }
 
         pub fn count(&self) -> u32 {
@@ -458,6 +462,23 @@ pub mod properties {
         println!("{:b}", props.reserved());
 
         println!();
+    }
+
+    #[cfg(test)]
+    #[test]
+    fn props_setters_replace() {
+        let mut props = ElemProps::default();
+        props.set_count(u32::MAX);
+        props.set_flags(PropFlag::CONST | PropFlag::RETURN);
+        props.set_data_type(DataType::Instance);
+
+        props.set_count(3);
+        props.set_flags(PropFlag::EXTERNAL);
+        props.set_data_type(DataType::Int);
+
+        assert_eq!(props.count(), 3);
+        assert_eq!(props.flags().bits(), PropFlag::EXTERNAL.bits());
+        assert_eq!(props.data_type(), DataType::Int);
     }
 
     impl std::fmt::Debug for ElemProps {
