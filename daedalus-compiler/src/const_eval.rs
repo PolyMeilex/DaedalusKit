@@ -166,7 +166,7 @@ impl<'a> ConstEvaluator<'a> {
                     return Err(Error::undefined_symbol(&ident.span, &ident.raw));
                 }
             }
-            ExprKind::Paren(_) => return unsupported("parentheses in a constant expression"),
+            ExprKind::Paren(inner) => self.visit_expr(inner)?,
             ExprKind::Field(_, _) => return unsupported("field access in a constant expression"),
             ExprKind::Index(_, _) => return unsupported("array index in a constant expression"),
         };
@@ -186,6 +186,7 @@ mod tests {
         let src = indoc! {"
         const int ABC = 5;
         const int CBA = ABC + 1;
+        const int PAREN = (CBA + 1) * 2;
         "};
 
         let mut files_store = Files::new();
@@ -198,5 +199,6 @@ mod tests {
         let values = ConstValues::build(&files, &indices, &mut diagnostics);
         assert!(diagnostics.into_errors().is_empty());
         assert!(matches!(values.map["CBA"], Value::Int(6)));
+        assert!(matches!(values.map["PAREN"], Value::Int(14)));
     }
 }
