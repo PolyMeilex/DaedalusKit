@@ -28,6 +28,33 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
     }
 
     pub fn visit_function(self, function: &daedalus_parser::FunctionDefinition) -> Result<()> {
+        for param in function.args.iter().rev() {
+            let name = format!("{}.{}", self.parent, param.ident.raw.to_ascii_uppercase());
+            let id = self.lookup(&param.ident.span, &name)?.id;
+            let data_type = self
+                .symbol_table
+                .get(id)
+                .expect("parameters are emitted before the body")
+                .props
+                .elem_props
+                .data_type();
+
+            let instructions = match data_type {
+                DataType::Int => [Instruction::push_var(id), Instruction::mov_int()],
+                DataType::Float => [Instruction::push_var(id), Instruction::mov_float()],
+                DataType::String => [Instruction::push_var(id), Instruction::mov_string()],
+                DataType::Func => [Instruction::push_var(id), Instruction::mov_func()],
+                DataType::Instance => [
+                    Instruction::push_var_instance(id),
+                    Instruction::mov_instance(),
+                ],
+                DataType::Void | DataType::Class | DataType::Prototype => {
+                    unreachable!("{data_type:?} is not a valid parameter type")
+                }
+            };
+            self.block.extend(&instructions);
+        }
+
         self.visit_block(&function.block)
     }
 
@@ -46,7 +73,7 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
     fn visit_block_item(&mut self, item: &BlockItem) -> Result<()> {
         match item {
             BlockItem::Expr(expr) => self.visit_expr(expr),
-            BlockItem::Var(var) => Err(Error::unsupported(&var.span, "local variables")),
+            BlockItem::Var(_) => Ok(()),
             BlockItem::If(stmt) => Err(Error::unsupported(&stmt.span, "if statements")),
             BlockItem::Return(stmt) => Err(Error::unsupported(&stmt.span, "return statements")),
         }

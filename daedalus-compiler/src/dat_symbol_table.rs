@@ -145,22 +145,23 @@ impl DatSymbolTable {
         &mut self,
         name: ZString,
         span: SymbolCodeSpan,
-        args: &[(ZString, DataType, SymbolCodeSpan)],
+        param_count: u32,
         ret: DataType,
         address: u32,
     ) -> u32 {
-        let fn_symbol = self.push_symbol(Symbol {
-            name: Some(name.clone()),
+        let mut flags = PropFlag::CONST;
+        if ret != DataType::Void {
+            flags |= PropFlag::RETURN;
+        }
+
+        self.push_symbol(Symbol {
+            name: Some(name),
             props: Properties {
                 off_cls_ret: ret as i32,
                 elem_props: {
                     let mut default = ElemProps::default();
-                    default.set_count(args.len() as u32);
+                    default.set_count(param_count);
                     default.set_data_type(DataType::Func);
-                    let mut flags = PropFlag::CONST;
-                    if ret != DataType::Void {
-                        flags |= PropFlag::RETURN;
-                    }
                     default.set_flags(flags);
                     default.set_space(1);
                     default
@@ -169,42 +170,7 @@ impl DatSymbolTable {
             code_span: span,
             data: SymbolData::Address(address as i32),
             parent: None,
-        });
-
-        for (ident, arg, span) in args.iter() {
-            let mut name = name.clone();
-            name.0.push_char('.');
-            name.0.push_str(ident);
-
-            self.push_symbol(Symbol {
-                name: Some(name),
-                props: Properties {
-                    off_cls_ret: 0,
-                    elem_props: {
-                        let mut default = ElemProps::default();
-                        default.set_count(0);
-                        default.set_data_type(*arg);
-                        default.set_flags(PropFlag::empty());
-                        default.set_space(1);
-                        default
-                    },
-                },
-                code_span: *span,
-                data: match arg {
-                    DataType::Float => SymbolData::Float(vec![]),
-                    DataType::Int => SymbolData::Int(vec![]),
-                    DataType::String => SymbolData::String(vec![]),
-                    DataType::Class => SymbolData::ClassOffset(0),
-                    DataType::Func => SymbolData::Address(0),
-                    DataType::Prototype => SymbolData::Address(0),
-                    DataType::Instance => SymbolData::Address(0),
-                    DataType::Void => SymbolData::None,
-                },
-                parent: None,
-            });
-        }
-
-        fn_symbol
+        })
     }
 
     /// Class and its fields, `offset` is where the fields start in the engine object

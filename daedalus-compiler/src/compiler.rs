@@ -16,7 +16,7 @@ use crate::{
     error::{Diagnostics, Error, ErrorKind, Result},
     files::{File, FileId, Files},
     span::SpanKind,
-    symbol_indices::{SymbolIndex, SymbolIndices, SymbolKind, item_symbols},
+    symbol_indices::{SymbolIndex, SymbolIndices, SymbolKind, function_locals, item_symbols},
 };
 
 pub struct Compiler {
@@ -146,7 +146,7 @@ impl Compiler {
                     ));
                 }
 
-                let span = files.symbol_span(file_id, &var.span, SpanKind::ClassField);
+                let span = files.symbol_span(file_id, &var.span, SpanKind::Member);
 
                 let count = match &var.kind {
                     daedalus_parser::VarKind::Value { .. } => 1,
@@ -175,19 +175,7 @@ impl Compiler {
         let span = files.symbol_span(file_id, &var.span, SpanKind::Var);
         let (data_type, parent) = self.var_type(&var.span, &var.ty)?;
 
-        let count = match &var.kind {
-            daedalus_parser::VarKind::Value { init: None } => 1,
-            daedalus_parser::VarKind::Array {
-                size_init,
-                init: None,
-            } => self.array_size(size_init)?,
-            _ => {
-                return Err(Error::invalid(
-                    &var.span,
-                    "variables can not be initialized",
-                ));
-            }
-        };
+        let count = self.var_count(var)?;
 
         if data_type == DataType::Func {
             return Err(Error::unsupported(&var.span, "global func variables"));
@@ -196,6 +184,20 @@ impl Compiler {
         self.symbol_table.var(name, span, data_type, count, parent);
 
         Ok(())
+    }
+
+    fn var_count(&self, var: &daedalus_parser::Var) -> Result<u32> {
+        match &var.kind {
+            daedalus_parser::VarKind::Value { init: None } => Ok(1),
+            daedalus_parser::VarKind::Array {
+                size_init,
+                init: None,
+            } => self.array_size(size_init),
+            _ => Err(Error::invalid(
+                &var.span,
+                "variables can not be initialized",
+            )),
+        }
     }
 
     /// Type of a variable, and the class of instance variables
@@ -318,11 +320,36 @@ impl Compiler {
         let ident = ZString::from(ident_utf8.as_bytes());
         let span = files.symbol_span(file_id, &func.span, SpanKind::Block);
 
-        let mut block = self.bytecode.block_builder();
+        let ret = data_type(&func.ident.span, &func.ty)?;
 
+        let address = self.bytecode.next_available_address();
         self.symbol_table
-            .func(ident, span, &[], DataType::Void, block.addr());
+            .func(ident, span, func.args.len() as u32, ret, address);
 
+        // ZenGin keeps the class of the last instance parameter for the parameters after it
+        let mut param_class = None;
+        for param in func.args.iter() {
+            let (data_type, class) = self.var_type(&param.span, &param.ty)?;
+            param_class = class.or(param_class);
+
+            let span = files.symbol_span(file_id, &param.span, SpanKind::Member);
+
+            let name = member_name(&ident_utf8, &param.ident);
+            let count = self.var_count(param)?;
+            self.symbol_table
+                .var(name, span, data_type, count, param_class);
+        }
+
+        for local in function_locals(&func.block) {
+            let (data_type, class) = self.var_type(&local.span, &local.ty)?;
+            let span = files.symbol_span(file_id, &local.span, SpanKind::Member);
+
+            let name = member_name(&ident_utf8, &local.ident);
+            let count = self.var_count(local)?;
+            self.symbol_table.var(name, span, data_type, count, class);
+        }
+
+        let mut block = self.bytecode.block_builder();
         let builder = BlockBuilder {
             parent: &ident_utf8,
             symbol_indices: &self.symbol_indices,
@@ -398,6 +425,10 @@ impl Compiler {
             .get(name)
             .ok_or_else(|| Error::undefined_symbol(span, name))
     }
+}
+
+fn member_name(parent: &str, member: &daedalus_parser::Ident) -> ZString {
+    ZString::from(format!("{parent}.{}", member.raw.to_ascii_uppercase()).as_bytes())
 }
 
 fn data_type(span: &Range<usize>, ty: &daedalus_parser::Ty) -> Result<DataType> {

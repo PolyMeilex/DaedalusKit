@@ -66,14 +66,17 @@ impl SymbolIndices {
 
 /// Names and kinds of the symbols an item defines, in the order they are stored in the symbol table
 pub fn item_symbols(item: &daedalus_parser::Item) -> Vec<(String, SymbolKind)> {
-    let members = |parent: &str, vars: &[daedalus_parser::Var], kind: SymbolKind| {
+    fn members<'a>(
+        parent: &str,
+        vars: impl IntoIterator<Item = &'a daedalus_parser::Var>,
+        kind: SymbolKind,
+    ) -> impl Iterator<Item = (String, SymbolKind)> {
         let parent = parent.to_ascii_uppercase();
-        let members = vars.iter().map(move |var| {
+        vars.into_iter().map(move |var| {
             let name = format!("{parent}.{}", var.ident.raw.to_ascii_uppercase());
             (name, kind)
-        });
-        members.collect::<Vec<_>>()
-    };
+        })
+    }
 
     let (ident, kind) = match item {
         daedalus_parser::Item::ExternFunc(item) => (&item.ident, SymbolKind::ExternFunction),
@@ -87,6 +90,15 @@ pub fn item_symbols(item: &daedalus_parser::Item) -> Vec<(String, SymbolKind)> {
 
     let mut symbols = vec![(ident.raw.to_ascii_uppercase(), kind)];
     match item {
+        daedalus_parser::Item::Func(item) => {
+            symbols.extend(members(
+                &item.ident.raw,
+                &item.args,
+                SymbolKind::FunctionArg,
+            ));
+            let locals = function_locals(&item.block);
+            symbols.extend(members(&item.ident.raw, locals, SymbolKind::Var));
+        }
         daedalus_parser::Item::ExternFunc(item) => {
             symbols.extend(members(
                 &item.ident.raw,
@@ -101,4 +113,26 @@ pub fn item_symbols(item: &daedalus_parser::Item) -> Vec<(String, SymbolKind)> {
     }
 
     symbols
+}
+
+pub fn function_locals(block: &daedalus_parser::Block) -> Vec<&daedalus_parser::Var> {
+    fn visit<'a>(block: &'a daedalus_parser::Block, out: &mut Vec<&'a daedalus_parser::Var>) {
+        for item in block.items.iter() {
+            match item {
+                daedalus_parser::BlockItem::Var(var) => out.push(var),
+                daedalus_parser::BlockItem::If(stmt) => {
+                    let mut branch = Some(stmt);
+                    while let Some(stmt) = branch {
+                        visit(&stmt.block, out);
+                        branch = stmt.next.as_deref();
+                    }
+                }
+                daedalus_parser::BlockItem::Return(_) | daedalus_parser::BlockItem::Expr(_) => {}
+            }
+        }
+    }
+
+    let mut locals = Vec::new();
+    visit(block, &mut locals);
+    locals
 }

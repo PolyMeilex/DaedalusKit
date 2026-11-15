@@ -233,6 +233,27 @@ impl Instruction {
         }
     }
 
+    pub fn mov_string() -> Self {
+        Self {
+            opcode: Opcode::MovS,
+            data: InstructionData::None,
+        }
+    }
+
+    pub fn mov_func() -> Self {
+        Self {
+            opcode: Opcode::MovVF,
+            data: InstructionData::None,
+        }
+    }
+
+    pub fn mov_instance() -> Self {
+        Self {
+            opcode: Opcode::MovVI,
+            data: InstructionData::None,
+        }
+    }
+
     pub fn push_var_array(symbol: u32, index: u8) -> Self {
         Self {
             opcode: Opcode::PushVV,

@@ -17,7 +17,7 @@ pub enum SpanKind {
     Block,
     Const,
     Var,
-    ClassField,
+    Member,
 }
 
 impl SpanKind {
@@ -25,7 +25,7 @@ impl SpanKind {
     fn char_count_padding(self) -> u32 {
         match self {
             SpanKind::Block => 2,
-            SpanKind::Const | SpanKind::Var | SpanKind::ClassField => 3,
+            SpanKind::Const | SpanKind::Var | SpanKind::Member => 3,
         }
     }
 }
@@ -38,9 +38,9 @@ impl Files<'_> {
         let line_start = self.line_index(file, span.start as u32);
         let line_end = self.line_index(file, span.end as u32);
 
-        let char_start = if compat && kind == SpanKind::ClassField {
-            // Class field spans start at the beginning of the line, which is plain wrong if 2
-            // fields are on the same line, but that's what ZenGin does
+        // Class field spans start at the beginning of the line, which is plain wrong if 2
+        // fields are on the same line, but that's what ZenGin does
+        let char_start = if compat && kind == SpanKind::Member {
             self.line_span(file, line_start)
                 .expect("line index comes from this file")
                 .start()
