@@ -36,6 +36,8 @@ pub enum AssocOp {
     Multiply,
     /// '/'
     Divide,
+    /// `%`
+    Modulo,
     /// `<<`
     ShiftLeft,
     /// `>>`
@@ -69,6 +71,7 @@ impl AssocOp {
             Self::BitOr => "|",
             Self::Multiply => "*",
             Self::Divide => "/",
+            Self::Modulo => "%",
             Self::ShiftLeft => "<<",
             Self::ShiftRight => ">>",
             Self::Assign => "=",
@@ -137,6 +140,10 @@ impl AssocOp {
                 lexer.eat_token(Token::Slash)?;
                 Self::Divide
             }
+            Token::Percent => {
+                lexer.eat_token(Token::Percent)?;
+                Self::Modulo
+            }
             Token::ShiftLeft => {
                 lexer.eat_token(Token::ShiftLeft)?;
                 Self::ShiftLeft
@@ -173,7 +180,7 @@ impl AssocOp {
 
     fn priority(&self) -> u32 {
         match self {
-            AssocOp::Multiply | AssocOp::Divide => 10,
+            AssocOp::Multiply | AssocOp::Divide | AssocOp::Modulo => 10,
             AssocOp::Add | AssocOp::Subtract => 9,
             AssocOp::ShiftLeft | AssocOp::ShiftRight => 8,
 

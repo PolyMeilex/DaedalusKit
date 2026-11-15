@@ -156,6 +156,8 @@ pub enum Token {
     Star,
     #[token("/")]
     Slash,
+    #[token("%")]
+    Percent,
     #[token("<<")]
     ShiftLeft,
     #[token(">>")]
@@ -213,6 +215,7 @@ impl std::fmt::Display for Token {
             Token::Bang => "'!'",
             Token::Star => "'*'",
             Token::Slash => "'/'",
+            Token::Percent => "'%'",
             Token::ShiftLeft => "'<<'",
             Token::ShiftRight => "'>>'",
             Token::Eof => "EOF",
