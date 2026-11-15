@@ -16,6 +16,7 @@ pub enum SpanKind {
     /// Class, instance, prototype or function
     Block,
     Const,
+    Var,
     ClassField,
 }
 
@@ -24,7 +25,7 @@ impl SpanKind {
     fn char_count_padding(self) -> u32 {
         match self {
             SpanKind::Block => 2,
-            SpanKind::Const | SpanKind::ClassField => 3,
+            SpanKind::Const | SpanKind::Var | SpanKind::ClassField => 3,
         }
     }
 }

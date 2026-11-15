@@ -302,6 +302,44 @@ impl DatSymbolTable {
         })
     }
 
+    pub fn var(
+        &mut self,
+        name: ZString,
+        code_span: SymbolCodeSpan,
+        data_type: DataType,
+        count: u32,
+        parent: Option<u32>,
+    ) -> u32 {
+        let len = count as usize;
+        let data = match data_type {
+            DataType::Int => SymbolData::Int(vec![0; len]),
+            DataType::Float => SymbolData::Float(vec![0.0; len]),
+            DataType::String => SymbolData::String(vec![ZString::default(); len]),
+            DataType::Instance | DataType::Func => SymbolData::Address(0),
+            DataType::Void | DataType::Class | DataType::Prototype => {
+                unreachable!("{data_type:?} is not a valid variable type")
+            }
+        };
+
+        self.push_symbol(Symbol {
+            name: Some(name),
+            props: Properties {
+                off_cls_ret: 0,
+                elem_props: {
+                    let mut default = ElemProps::default();
+                    default.set_count(count);
+                    default.set_data_type(data_type);
+                    default.set_flags(PropFlag::empty());
+                    default.set_space(1);
+                    default
+                },
+            },
+            code_span,
+            data,
+            parent,
+        })
+    }
+
     pub fn instance(
         &mut self,
         name: ZString,

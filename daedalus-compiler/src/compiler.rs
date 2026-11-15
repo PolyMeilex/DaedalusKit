@@ -80,9 +80,7 @@ impl Compiler {
             daedalus_parser::Item::Prototype(prototype) => {
                 self.prototype(files, file_id, prototype)
             }
-            daedalus_parser::Item::Var(var) => {
-                Err(Error::unsupported(&var.span, "global variables"))
-            }
+            daedalus_parser::Item::Var(var) => self.global_var(files, file_id, var),
         }
     }
 
@@ -165,6 +163,60 @@ impl Compiler {
         self.symbol_table.class(name, span, &fields, offset);
 
         Ok(())
+    }
+
+    fn global_var(
+        &mut self,
+        files: &Files,
+        file_id: FileId,
+        var: &daedalus_parser::Var,
+    ) -> Result<()> {
+        let name = ZString::from(var.ident.raw.as_bytes().to_ascii_uppercase());
+        let span = files.symbol_span(file_id, &var.span, SpanKind::Var);
+        let (data_type, parent) = self.var_type(&var.span, &var.ty)?;
+
+        let count = match &var.kind {
+            daedalus_parser::VarKind::Value { init: None } => 1,
+            daedalus_parser::VarKind::Array {
+                size_init,
+                init: None,
+            } => self.array_size(size_init)?,
+            _ => {
+                return Err(Error::invalid(
+                    &var.span,
+                    "variables can not be initialized",
+                ));
+            }
+        };
+
+        if data_type == DataType::Func {
+            return Err(Error::unsupported(&var.span, "global func variables"));
+        }
+
+        self.symbol_table.var(name, span, data_type, count, parent);
+
+        Ok(())
+    }
+
+    /// Type of a variable, and the class of instance variables
+    fn var_type(
+        &self,
+        span: &Range<usize>,
+        ty: &daedalus_parser::Ty,
+    ) -> Result<(DataType, Option<u32>)> {
+        if let Ok(data_type) = data_type(span, ty) {
+            return Ok((data_type, None));
+        }
+
+        let class = self.lookup(span, &ty.raw.to_ascii_uppercase())?;
+        if class.kind != SymbolKind::Class {
+            return Err(Error::unsupported(
+                span,
+                format!("variables of type {:?}", class.kind),
+            ));
+        }
+
+        Ok((DataType::Instance, Some(class.id)))
     }
 
     fn array_size(&self, size: &Expr) -> Result<u32> {
@@ -349,6 +401,6 @@ impl Compiler {
 }
 
 fn data_type(span: &Range<usize>, ty: &daedalus_parser::Ty) -> Result<DataType> {
-    DataType::from_str(&ty.raw)
+    DataType::from_str(&ty.raw.to_ascii_lowercase())
         .map_err(|()| Error::new(span, ErrorKind::UnknownType(ty.raw.clone())))
 }
