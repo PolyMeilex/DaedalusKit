@@ -152,6 +152,8 @@ pub enum Token {
     Dot,
     #[token("!")]
     Bang,
+    #[token("~")]
+    Tilde,
     #[token("*")]
     Star,
     #[token("/")]
@@ -213,6 +215,7 @@ impl std::fmt::Display for Token {
             Token::Minus => "'-'",
             Token::Dot => "'.'",
             Token::Bang => "'!'",
+            Token::Tilde => "'~'",
             Token::Star => "'*'",
             Token::Slash => "'/'",
             Token::Percent => "'%'",

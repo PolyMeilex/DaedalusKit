@@ -112,6 +112,7 @@ impl<'a> ConstEvaluator<'a> {
                     daedalus_parser::AssocOp::BitOr => Value::Int(left | right),
                     daedalus_parser::AssocOp::Multiply => Value::Int(left * right),
                     daedalus_parser::AssocOp::Divide => Value::Int(left / right),
+                    daedalus_parser::AssocOp::Modulo => Value::Int(left % right),
                     daedalus_parser::AssocOp::ShiftLeft => Value::Int(left << right),
                     daedalus_parser::AssocOp::ShiftRight => Value::Int(left >> right),
                     daedalus_parser::AssocOp::Assign => todo!(),
@@ -131,6 +132,7 @@ impl<'a> ConstEvaluator<'a> {
                         _ => 0,
                     },
                     UnaryOp::Negative => -value,
+                    UnaryOp::Complement => !value,
                 })
             }
             ExprKind::Lit(lit) => match &lit.kind {

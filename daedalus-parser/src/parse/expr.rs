@@ -208,6 +208,8 @@ pub enum UnaryOp {
     Not,
     /// '-'
     Negative,
+    /// '~', bitwise complement
+    Complement,
 }
 
 #[derive(Debug)]
@@ -295,6 +297,11 @@ impl Expr {
                 ctx.lexer.eat_token(Token::Bang)?;
                 let expr = Self::parse_without_op(ctx)?;
                 ExprKind::Unary(UnaryOp::Not, Box::new(expr))
+            }
+            Token::Tilde => {
+                ctx.lexer.eat_token(Token::Tilde)?;
+                let expr = Self::parse_without_op(ctx)?;
+                ExprKind::Unary(UnaryOp::Complement, Box::new(expr))
             }
             Token::Minus => {
                 ctx.lexer.eat_token(Token::Minus)?;

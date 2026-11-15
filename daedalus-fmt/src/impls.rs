@@ -113,6 +113,7 @@ impl DaedalusDisplay for Expr {
                 match op {
                     UnaryOp::Not => write!(f, "!")?,
                     UnaryOp::Negative => write!(f, "-")?,
+                    UnaryOp::Complement => write!(f, "~")?,
                 }
                 v.fmt(f)?;
             }
