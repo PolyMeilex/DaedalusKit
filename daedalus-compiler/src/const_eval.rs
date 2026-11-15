@@ -4,7 +4,11 @@ use std::collections::HashMap;
 
 use daedalus_parser::{Expr, ExprKind, LitKind, UnaryOp};
 
-use crate::{files::File, symbol_indices::SymbolIndices};
+use crate::{
+    error::{Diagnostics, Error, Result},
+    files::File,
+    symbol_indices::SymbolIndices,
+};
 
 #[derive(Debug)]
 pub enum Value {
@@ -49,6 +53,7 @@ impl ConstValues {
     pub fn build<'a>(
         files: impl IntoIterator<Item = &'a File> + Clone,
         indices: &'a SymbolIndices,
+        diagnostics: &mut Diagnostics,
     ) -> Self {
         let mut map = ConstNodes::default();
         map.visit_files(files.clone());
@@ -59,8 +64,12 @@ impl ConstValues {
         for file in files {
             for item in file.ast.items.iter() {
                 if let daedalus_parser::Item::Const(item) = item {
-                    let value = eval.visit_const(item);
-                    map.insert(item.ident.raw.to_ascii_uppercase(), value);
+                    match eval.visit_const(item) {
+                        Ok(value) => {
+                            map.insert(item.ident.raw.to_ascii_uppercase(), value);
+                        }
+                        Err(err) => diagnostics.report(file.id, err),
+                    }
                 }
             }
         }
@@ -75,26 +84,27 @@ struct ConstEvaluator<'a> {
 }
 
 impl<'a> ConstEvaluator<'a> {
-    fn visit_const(&mut self, item: &daedalus_parser::Const) -> Value {
+    fn visit_const(&mut self, item: &daedalus_parser::Const) -> Result<Value> {
         match &item.kind {
             daedalus_parser::ConstKind::Value { init } => self.visit_expr(init),
             daedalus_parser::ConstKind::Array { size_init: _, init } => {
-                let values: Vec<_> = init.iter().map(|expr| self.visit_expr(expr)).collect();
-                // todo!("{}[{}] = {:?}", item.ident.raw, values.len(), values)
-                Value::Array(values)
+                let values = init.iter().map(|expr| self.visit_expr(expr));
+                Ok(Value::Array(values.collect::<Result<_>>()?))
             }
         }
     }
 
-    fn visit_expr(&mut self, expr: &Expr) -> Value {
-        match &expr.kind {
+    fn visit_expr(&mut self, expr: &Expr) -> Result<Value> {
+        let unsupported = |what: &str| Err(Error::unsupported(&expr.span, what));
+
+        let value = match &expr.kind {
             ExprKind::Binary(op, left, right) => {
-                let left = self.visit_expr(left);
-                let right = self.visit_expr(right);
+                let left = self.visit_expr(left)?;
+                let right = self.visit_expr(right)?;
 
                 let (left, right) = match (left, right) {
                     (Value::Int(l), Value::Int(r)) => (l, r),
-                    _ => todo!(),
+                    _ => return unsupported("non integer operands in a constant expression"),
                 };
 
                 match op {
@@ -115,16 +125,22 @@ impl<'a> ConstEvaluator<'a> {
                     daedalus_parser::AssocOp::Modulo => Value::Int(left % right),
                     daedalus_parser::AssocOp::ShiftLeft => Value::Int(left << right),
                     daedalus_parser::AssocOp::ShiftRight => Value::Int(left >> right),
-                    daedalus_parser::AssocOp::Assign => todo!(),
-                    daedalus_parser::AssocOp::AddAssign => todo!(),
-                    daedalus_parser::AssocOp::SubtractAssign => todo!(),
-                    daedalus_parser::AssocOp::MultiplyAssign => todo!(),
-                    daedalus_parser::AssocOp::DivideAssign => todo!(),
+                    daedalus_parser::AssocOp::Assign
+                    | daedalus_parser::AssocOp::AddAssign
+                    | daedalus_parser::AssocOp::SubtractAssign
+                    | daedalus_parser::AssocOp::MultiplyAssign
+                    | daedalus_parser::AssocOp::DivideAssign => {
+                        return Err(Error::invalid(
+                            &expr.span,
+                            "assignment in a constant expression",
+                        ));
+                    }
                 }
             }
-            ExprKind::Unary(op, expr) => {
-                let value = self.visit_expr(expr);
-                let Value::Int(value) = value else { todo!() };
+            ExprKind::Unary(op, operand) => {
+                let Value::Int(value) = self.visit_expr(operand)? else {
+                    return unsupported("non integer operand in a constant expression");
+                };
 
                 Value::Int(match op {
                     UnaryOp::Not => match value {
@@ -140,27 +156,29 @@ impl<'a> ConstEvaluator<'a> {
                 LitKind::Float(v) => Value::Float(*v),
                 LitKind::String(v) => Value::String(v.clone()),
             },
-            ExprKind::Call(_) => todo!(),
+            ExprKind::Call(_) => return unsupported("function call in a constant expression"),
             ExprKind::Ident(ident) => {
                 if let Some(ref_item) = self.map.map.get(ident.raw.to_ascii_uppercase().as_str()) {
-                    self.visit_const(ref_item)
+                    self.visit_const(ref_item)?
                 } else if let Some(symbol) = self.indices.get(&ident.raw.to_ascii_uppercase()) {
                     Value::Symbol(symbol.id)
                 } else {
-                    todo!()
+                    return Err(Error::undefined_symbol(&ident.span, &ident.raw));
                 }
             }
-            ExprKind::Paren(_) => todo!(),
-            ExprKind::Field(_, _) => todo!(),
-            ExprKind::Index(_, _) => todo!(),
-        }
+            ExprKind::Paren(_) => return unsupported("parentheses in a constant expression"),
+            ExprKind::Field(_, _) => return unsupported("field access in a constant expression"),
+            ExprKind::Index(_, _) => return unsupported("array index in a constant expression"),
+        };
+
+        Ok(value)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::files::Files;
+    use crate::{error::Diagnostics, files::Files};
     use indoc::indoc;
 
     #[test]
@@ -175,7 +193,10 @@ mod tests {
         let files = [file];
 
         let indices = SymbolIndices::build(&files);
+        let mut diagnostics = Diagnostics::new(&files_store);
 
-        ConstValues::build(&files, &indices);
+        let values = ConstValues::build(&files, &indices, &mut diagnostics);
+        assert!(diagnostics.into_errors().is_empty());
+        assert!(matches!(values.map["CBA"], Value::Int(6)));
     }
 }

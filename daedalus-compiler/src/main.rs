@@ -1,6 +1,14 @@
-use std::path::Path;
+use std::{collections::HashMap, io::IsTerminal, path::Path};
 
-use daedalus_compiler::{CompilationUnit, SourceFile};
+use codespan_reporting::{
+    diagnostic::{Diagnostic, Label},
+    files::SimpleFiles,
+    term::{
+        self,
+        termcolor::{ColorChoice, StandardStream},
+    },
+};
+use daedalus_compiler::{CompilationUnit, CompileError, SourceFile};
 
 const USAGE: &str = "\
 usage: daedalus-compiler --unit <gothic|camera> -o <out.DAT> <input>...
@@ -36,7 +44,16 @@ fn main() {
         }
     }
 
-    let dat = daedalus_compiler::compile(unit, &sources).unwrap_or_else(|err| fail(err));
+    let dat = match daedalus_compiler::compile(unit, &sources) {
+        Ok(dat) => dat,
+        Err(errors) => {
+            report(unit, &sources, &errors);
+            fail(format_args!(
+                "could not compile due to {} errors",
+                errors.len()
+            ));
+        }
+    };
 
     if let Err(err) = std::fs::write(&output, dat) {
         fail(format_args!("failed to write {output}: {err}"));
@@ -70,6 +87,43 @@ impl Args {
             inputs,
         })
         .filter(|args| !args.inputs.is_empty())
+    }
+}
+
+/// Print errors with the source code they point to
+fn report(unit: CompilationUnit, sources: &[SourceFile], errors: &[CompileError]) {
+    let mut files = SimpleFiles::new();
+    let mut file_ids = HashMap::new();
+
+    let prelude = unit
+        .prelude()
+        .map(|prelude| (Path::new(CompilationUnit::PRELUDE_PATH), prelude));
+    let sources = sources
+        .iter()
+        .map(|file| (file.path.as_path(), file.source.as_str()));
+
+    for (path, source) in prelude.into_iter().chain(sources) {
+        file_ids.insert(path, files.add(path.display().to_string(), source));
+    }
+
+    let writer = StandardStream::stderr(if std::io::stderr().is_terminal() {
+        ColorChoice::Auto
+    } else {
+        ColorChoice::Never
+    });
+    let config = term::Config::default();
+
+    for error in errors {
+        let diagnostic = Diagnostic::error().with_message(error.kind.to_string());
+        let diagnostic = match file_ids.get(error.path.as_path()) {
+            Some(&file_id) => {
+                diagnostic.with_labels(vec![Label::primary(file_id, error.span.clone())])
+            }
+            None => diagnostic.with_notes(vec![format!("in {}", error.path.display())]),
+        };
+
+        term::emit(&mut writer.lock(), &config, &files, &diagnostic)
+            .expect("failed to write to stderr");
     }
 }
 

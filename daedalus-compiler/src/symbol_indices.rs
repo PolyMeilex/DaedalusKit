@@ -45,44 +45,8 @@ impl SymbolIndices {
     }
 
     fn handle_item(&mut self, item: &daedalus_parser::Item) {
-        match item {
-            daedalus_parser::Item::ExternFunc(item) => {
-                let ident = item.ident.raw.to_ascii_uppercase();
-                self.push_symbol(ident.clone(), SymbolKind::ExternFunction);
-
-                for var in item.args.iter() {
-                    self.push_symbol(
-                        format!("{}.{}", ident, var.ident.raw.to_ascii_uppercase()),
-                        SymbolKind::FunctionArg,
-                    );
-                }
-            }
-            daedalus_parser::Item::Class(item) => {
-                let ident = item.ident.raw.to_ascii_uppercase();
-                self.push_symbol(ident.clone(), SymbolKind::Class);
-
-                for var in item.fields.iter() {
-                    self.push_symbol(
-                        format!("{}.{}", ident, var.ident.raw.to_ascii_uppercase()),
-                        SymbolKind::ClassVar,
-                    );
-                }
-            }
-            daedalus_parser::Item::Instance(item) => {
-                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Instance);
-            }
-            daedalus_parser::Item::Func(item) => {
-                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Function);
-            }
-            daedalus_parser::Item::Const(item) => {
-                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Const);
-            }
-            daedalus_parser::Item::Var(item) => {
-                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Var);
-            }
-            daedalus_parser::Item::Prototype(item) => {
-                self.push_symbol(item.ident.raw.to_ascii_uppercase(), SymbolKind::Prototype);
-            }
+        for (name, kind) in item_symbols(item) {
+            self.push_symbol(name, kind);
         }
     }
 
@@ -98,4 +62,43 @@ impl SymbolIndices {
 
         symbol_map
     }
+}
+
+/// Names and kinds of the symbols an item defines, in the order they are stored in the symbol table
+pub fn item_symbols(item: &daedalus_parser::Item) -> Vec<(String, SymbolKind)> {
+    let members = |parent: &str, vars: &[daedalus_parser::Var], kind: SymbolKind| {
+        let parent = parent.to_ascii_uppercase();
+        let members = vars.iter().map(move |var| {
+            let name = format!("{parent}.{}", var.ident.raw.to_ascii_uppercase());
+            (name, kind)
+        });
+        members.collect::<Vec<_>>()
+    };
+
+    let (ident, kind) = match item {
+        daedalus_parser::Item::ExternFunc(item) => (&item.ident, SymbolKind::ExternFunction),
+        daedalus_parser::Item::Class(item) => (&item.ident, SymbolKind::Class),
+        daedalus_parser::Item::Instance(item) => (&item.ident, SymbolKind::Instance),
+        daedalus_parser::Item::Func(item) => (&item.ident, SymbolKind::Function),
+        daedalus_parser::Item::Const(item) => (&item.ident, SymbolKind::Const),
+        daedalus_parser::Item::Var(item) => (&item.ident, SymbolKind::Var),
+        daedalus_parser::Item::Prototype(item) => (&item.ident, SymbolKind::Prototype),
+    };
+
+    let mut symbols = vec![(ident.raw.to_ascii_uppercase(), kind)];
+    match item {
+        daedalus_parser::Item::ExternFunc(item) => {
+            symbols.extend(members(
+                &item.ident.raw,
+                &item.args,
+                SymbolKind::FunctionArg,
+            ));
+        }
+        daedalus_parser::Item::Class(item) => {
+            symbols.extend(members(&item.ident.raw, &item.fields, SymbolKind::ClassVar));
+        }
+        _ => {}
+    }
+
+    symbols
 }

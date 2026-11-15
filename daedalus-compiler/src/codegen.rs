@@ -1,10 +1,13 @@
+use std::ops::Range;
+
 use daedalus_bytecode::Instruction;
-use daedalus_parser::{AssocOp, BlockItem, Expr, ExprKind, FunctionCall, Ident, LitKind};
+use daedalus_parser::{AssocOp, BlockItem, Expr, ExprKind, FunctionCall, Ident, Lit, LitKind};
 use dat_file::properties::{DataType, PropFlag};
 use zstring::ZString;
 
 use crate::{
     dat_symbol_table::DatSymbolTable,
+    error::{Error, Result},
     symbol_indices::{SymbolIndex, SymbolIndices, SymbolKind},
 };
 
@@ -16,131 +19,125 @@ pub struct BlockBuilder<'a, 'b> {
 }
 
 impl<'a, 'b> BlockBuilder<'a, 'b> {
-    pub fn visit_instance(mut self, instance: &daedalus_parser::Instance) {
-        for item in instance.block.items.iter() {
-            self.visit_block_item(item);
-        }
-
-        self.close(&instance.block);
+    pub fn visit_instance(self, instance: &daedalus_parser::Instance) -> Result<()> {
+        self.visit_block(&instance.block)
     }
 
-    pub fn visit_prototype(mut self, prototype: &daedalus_parser::Prototype) {
-        for item in prototype.block.items.iter() {
-            self.visit_block_item(item);
-        }
-
-        self.close(&prototype.block);
+    pub fn visit_prototype(self, prototype: &daedalus_parser::Prototype) -> Result<()> {
+        self.visit_block(&prototype.block)
     }
 
-    pub fn visit_function(mut self, function: &daedalus_parser::FunctionDefinition) {
-        for item in function.block.items.iter() {
-            self.visit_block_item(item);
-        }
-
-        self.close(&function.block);
+    pub fn visit_function(self, function: &daedalus_parser::FunctionDefinition) -> Result<()> {
+        self.visit_block(&function.block)
     }
 
-    fn visit_block_item(&mut self, item: &BlockItem) {
+    fn visit_block(mut self, block: &daedalus_parser::Block) -> Result<()> {
+        for item in block.items.iter() {
+            self.visit_block_item(item)?;
+        }
+
+        if block.is_implicit_return() {
+            self.block.ret();
+        }
+
+        Ok(())
+    }
+
+    fn visit_block_item(&mut self, item: &BlockItem) -> Result<()> {
         match item {
             BlockItem::Expr(expr) => self.visit_expr(expr),
-            _ => todo!(),
+            BlockItem::Var(var) => Err(Error::unsupported(&var.span, "local variables")),
+            BlockItem::If(stmt) => Err(Error::unsupported(&stmt.span, "if statements")),
+            BlockItem::Return(stmt) => Err(Error::unsupported(&stmt.span, "return statements")),
         }
     }
 
-    fn visit_expr(&mut self, expr: &Expr) {
+    fn visit_expr(&mut self, expr: &Expr) -> Result<()> {
         match &expr.kind {
-            ExprKind::Binary(op, left, right) => self.visit_binary_op(op, left, right),
+            ExprKind::Binary(AssocOp::Assign, left, right) => self.visit_assign(left, right),
             ExprKind::Call(call) => self.visit_call(call),
-            _ => todo!(),
+            _ => Err(Error::unsupported(&expr.span, "expression statement")),
         }
     }
 
-    fn visit_binary_op(&mut self, op: &AssocOp, left: &Expr, right: &Expr) {
-        assert_eq!(*op, AssocOp::Assign);
-
+    fn visit_assign(&mut self, left: &Expr, right: &Expr) -> Result<()> {
         match &left.kind {
             ExprKind::Ident(ident) => {
-                let ExprKind::Lit(value) = &right.kind else {
-                    todo!()
-                };
+                let value = literal(right)?;
 
-                let symbol = ident.raw.to_ascii_uppercase();
-                let symbol = format!("{}.{symbol}", self.parent);
+                let name = format!("{}.{}", self.parent, ident.raw.to_ascii_uppercase());
+                let destination = self.lookup(&ident.span, &name)?.id;
 
-                let destination = self.symbol_indices.get(&symbol).unwrap().id;
+                let destination_symbol = self.symbol_table.get(destination).ok_or_else(|| {
+                    Error::invalid(&ident.span, "assignment to a symbol that failed to compile")
+                })?;
 
-                let destination_symbol = &self.symbol_table.symbols[destination as usize];
-                assert!(
-                    destination_symbol
-                        .props
-                        .elem_props
-                        .flags()
-                        .contains(PropFlag::CLASS_VAR),
-                    "TODO"
-                );
+                let props = &destination_symbol.props.elem_props;
+                if !props.flags().contains(PropFlag::CLASS_VAR) {
+                    return Err(Error::unsupported(
+                        &left.span,
+                        "assignment to a non class variable",
+                    ));
+                }
 
-                match destination_symbol.props.elem_props.data_type() {
-                    DataType::Void => todo!(),
-                    DataType::Float => {
-                        let value = match value.kind {
-                            LitKind::Intager(value) => value as f32,
-                            LitKind::Float(value) => value,
-                            _ => todo!(),
-                        };
-                        self.block.var_assign_float((destination, 0), value)
+                match (props.data_type(), &value.kind) {
+                    (DataType::Float, LitKind::Intager(value)) => {
+                        self.block.var_assign_float((destination, 0), *value as f32);
                     }
-                    DataType::Int => {
-                        let value = match value.kind {
-                            LitKind::Intager(value) => value,
-                            _ => todo!(),
-                        };
-                        self.block.var_assign_int((destination, 0), value)
+                    (DataType::Float, LitKind::Float(value)) => {
+                        self.block.var_assign_float((destination, 0), *value);
                     }
-                    DataType::String => todo!(),
-                    DataType::Class => todo!(),
-                    DataType::Func => todo!(),
-                    DataType::Prototype => todo!(),
-                    DataType::Instance => todo!(),
+                    (DataType::Int, LitKind::Intager(value)) => {
+                        self.block.var_assign_int((destination, 0), *value);
+                    }
+                    (ty, _) => {
+                        return Err(Error::unsupported(
+                            &right.span,
+                            format!("assignment of this value to a {ty:?} variable"),
+                        ));
+                    }
                 };
             }
-            ExprKind::Index(symbol, id) => {
-                let ExprKind::Ident(symbol) = &symbol.kind else {
-                    todo!()
+            ExprKind::Index(array, index) => {
+                let ExprKind::Ident(array) = &array.kind else {
+                    return Err(Error::unsupported(&array.span, "indexing a non identifier"));
                 };
-                let symbol = symbol.raw.to_ascii_uppercase();
-                let symbol = format!("{}.{symbol}", self.parent);
+                let name = format!("{}.{}", self.parent, array.raw.to_ascii_uppercase());
+                let array_id = self.lookup(&array.span, &name)?.id;
 
-                let ExprKind::Lit(id) = &id.kind else { todo!() };
-                let LitKind::Intager(id) = id.kind else {
-                    todo!()
+                let LitKind::Intager(index_value) = literal(index)?.kind else {
+                    return Err(Error::invalid(&index.span, "non integer array index"));
                 };
-                let id = u8::try_from(id).expect("TODO");
+                let index_value = u8::try_from(index_value)
+                    .map_err(|_| Error::invalid(&index.span, "array index out of range"))?;
 
-                let ExprKind::Lit(value) = &right.kind else {
-                    todo!()
-                };
-                let LitKind::Intager(value) = value.kind else {
-                    todo!()
+                let LitKind::Intager(value) = literal(right)?.kind else {
+                    return Err(Error::unsupported(&right.span, "non integer array element"));
                 };
 
-                // "C_NPC.ATTRIBUTE"
-                let npc_attributes = self.symbol_indices.get(&symbol).unwrap().id;
-
-                self.block.var_assign_int((npc_attributes, id), value);
+                self.block.var_assign_int((array_id, index_value), value);
             }
-            expr => todo!("{expr:?}"),
+            _ => return Err(Error::unsupported(&left.span, "assignment destination")),
         }
+
+        Ok(())
     }
 
-    fn visit_reference(&self, ident: &Ident) -> &SymbolIndex {
-        let name = ident.raw.to_ascii_uppercase();
-        self.symbol_indices.get(&name).expect("TODO")
+    fn lookup(&self, span: &Range<usize>, name: &str) -> Result<&'a SymbolIndex> {
+        let symbol_indices: &'a SymbolIndices = self.symbol_indices;
+        symbol_indices
+            .get(name)
+            .ok_or_else(|| Error::undefined_symbol(span, name))
     }
 
-    fn visit_call_arg(&mut self, arg: &Expr) {
+    fn visit_reference(&self, ident: &Ident) -> Result<&'a SymbolIndex> {
+        self.lookup(&ident.span, &ident.raw.to_ascii_uppercase())
+    }
+
+    fn visit_call_arg(&mut self, arg: &Expr) -> Result<()> {
         match &arg.kind {
             ExprKind::Ident(arg) => {
-                let symbol = self.visit_reference(arg);
+                let symbol = self.visit_reference(arg)?;
                 self.block
                     .push_instruction(if SymbolKind::Instance == symbol.kind {
                         Instruction::push_var_instance(symbol.id)
@@ -167,22 +164,20 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
                     ));
                 }
             },
-            _ => {
-                todo!()
-            }
+            _ => return Err(Error::unsupported(&arg.span, "call argument")),
         };
+
+        Ok(())
     }
 
     // Mdl_SetVisual(self, "HUMANS.MDS")
     // Mdl_SetVisualBody(self, "hum_body_Naked0", 9, 0, "Hum_Head_Pony", 18, 0, -1);
-    fn visit_call(&mut self, call: &FunctionCall) {
-        let ident = call.ident.raw.to_ascii_uppercase();
-
+    fn visit_call(&mut self, call: &FunctionCall) -> Result<()> {
         for arg in call.args.iter() {
-            self.visit_call_arg(arg);
+            self.visit_call_arg(arg)?;
         }
 
-        let symbol = self.symbol_indices.get(&ident).unwrap();
+        let symbol = self.visit_reference(&call.ident)?;
         match symbol.kind {
             SymbolKind::ExternFunction => {
                 self.block.extend(&[Instruction::call_extern(symbol.id)]);
@@ -190,13 +185,21 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
             SymbolKind::Function => {
                 self.block.extend(&[Instruction::call(symbol.id)]);
             }
-            kind => todo!("{kind:?}"),
+            _ => {
+                return Err(Error::invalid(
+                    &call.ident.span,
+                    format!("`{}` is not a function", call.ident.raw),
+                ));
+            }
         }
-    }
 
-    fn close(self, block: &daedalus_parser::Block) {
-        if block.is_implicit_return() {
-            self.block.ret();
-        }
+        Ok(())
+    }
+}
+
+fn literal(expr: &Expr) -> Result<&Lit> {
+    match &expr.kind {
+        ExprKind::Lit(lit) => Ok(lit),
+        _ => Err(Error::unsupported(&expr.span, "non literal value")),
     }
 }
