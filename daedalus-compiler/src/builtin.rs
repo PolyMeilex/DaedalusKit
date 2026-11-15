@@ -1,5 +1,13 @@
-pub fn get_address(v: &str) -> Option<u32> {
-    let addr = match v {
+//! Definitions the engine registers into the parser before any script is compiled
+
+/// Extern function declarations registered by the Gothic 2 engine for the game parser
+/// (`Gothic.src`), in registration order
+pub const GOTHIC_PRELUDE: &str = include_str!("builtin/gothic.d");
+
+/// Address of the engine function implementing an extern, in the `Gothic2.exe` of the Steam
+/// release, as found in its original `GOTHIC.DAT`
+pub fn get_address(name: &str) -> Option<u32> {
+    let addr = match name {
         "INTTOSTRING" => 0x6e2730,
         "FLOATTOSTRING" => 0x6e2870,
         "FLOATTOINT" => 0x6e29e0,
@@ -315,6 +323,8 @@ pub fn get_address(v: &str) -> Option<u32> {
         "NPC_GETPORTALGUILD" => 0x6e4ee0,
         "HLP_CUTSCENEPLAYED" => 0x6eed50,
         "GAME_INITGERMAN" => 0x6fb9a0,
+        "GAME_INITENGLISH" => 0x6fb9c0,
+        "GAME_INITENGINTL" => 0x6fb9e0,
         _ => return None,
     };
 

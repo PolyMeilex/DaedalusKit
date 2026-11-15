@@ -1,14 +1,20 @@
 use std::path::Path;
 
-use daedalus_compiler::SourceFile;
+use daedalus_compiler::{CompilationUnit, SourceFile};
 
 const USAGE: &str = "\
-usage: daedalus-compiler -o <out.DAT> <input>...
+usage: daedalus-compiler --unit <gothic|camera> -o <out.DAT> <input>...
 
-Inputs are compiled in order. A `.src` input is expanded into the files it lists.";
+Inputs are compiled in order. A `.src` input is expanded into the files it lists.
+The unit selects the builtin definitions the engine provides to the scripts.";
 
 fn main() {
-    let Some((output, inputs)) = parse_args(std::env::args().skip(1)) else {
+    let Some(Args {
+        unit,
+        output,
+        inputs,
+    }) = Args::parse(std::env::args().skip(1))
+    else {
         eprintln!("{USAGE}");
         std::process::exit(2);
     };
@@ -30,27 +36,41 @@ fn main() {
         }
     }
 
-    let dat = daedalus_compiler::compile(&sources).unwrap_or_else(|err| fail(err));
+    let dat = daedalus_compiler::compile(unit, &sources).unwrap_or_else(|err| fail(err));
 
     if let Err(err) = std::fs::write(&output, dat) {
         fail(format_args!("failed to write {output}: {err}"));
     }
 }
 
-/// `-o <output>` and a non-empty list of inputs, in any order
-fn parse_args(mut args: impl Iterator<Item = String>) -> Option<(String, Vec<String>)> {
-    let mut output = None;
-    let mut inputs = Vec::new();
+struct Args {
+    unit: CompilationUnit,
+    output: String,
+    inputs: Vec<String>,
+}
 
-    while let Some(arg) = args.next() {
-        if arg == "-o" {
-            output = Some(args.next()?);
-        } else {
-            inputs.push(arg);
+impl Args {
+    /// Flags and a non-empty list of inputs, in any order
+    fn parse(mut args: impl Iterator<Item = String>) -> Option<Self> {
+        let mut unit = None;
+        let mut output = None;
+        let mut inputs = Vec::new();
+
+        while let Some(arg) = args.next() {
+            match arg.as_str() {
+                "--unit" => unit = Some(args.next()?.parse().ok()?),
+                "-o" => output = Some(args.next()?),
+                _ => inputs.push(arg),
+            }
         }
-    }
 
-    Some((output?, inputs)).filter(|(_, inputs)| !inputs.is_empty())
+        Some(Self {
+            unit: unit?,
+            output: output?,
+            inputs,
+        })
+        .filter(|args| !args.inputs.is_empty())
+    }
 }
 
 fn fail(message: impl std::fmt::Display) -> ! {

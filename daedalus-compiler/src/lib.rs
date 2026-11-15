@@ -577,21 +577,67 @@ impl std::fmt::Display for CompileError {
 
 impl std::error::Error for CompileError {}
 
-/// Compile source files, in order, into the encoded `.DAT` file
-pub fn compile(sources: &[SourceFile]) -> Result<Vec<u8>, CompileError> {
-    let mut files_store = Files::new();
+/// Each `.src` file is compiled by a separate engine parser, which comes with its own set of
+/// builtin definitions
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompilationUnit {
+    /// `Content/Gothic.src`
+    Gothic,
+    /// `System/Camera.src`
+    Camera,
+}
 
-    let files = sources
+impl CompilationUnit {
+    /// Declarations the engine registers before compiling the unit
+    fn prelude(self) -> Option<&'static str> {
+        match self {
+            CompilationUnit::Gothic => Some(builtin::GOTHIC_PRELUDE),
+            CompilationUnit::Camera => None,
+        }
+    }
+}
+
+impl FromStr for CompilationUnit {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().as_str() {
+            "gothic" => Ok(Self::Gothic),
+            "camera" => Ok(Self::Camera),
+            _ => Err(()),
+        }
+    }
+}
+
+/// Compile source files, in order, into the encoded `.DAT` file
+pub fn compile(unit: CompilationUnit, sources: &[SourceFile]) -> Result<Vec<u8>, CompileError> {
+    const PRELUDE_PATH: &str = "<builtin>";
+
+    let mut files_store = Files::new();
+    let parse_error = |path: &Path| {
+        let path = path.to_path_buf();
+        move |error| CompileError::Parse { path, error }
+    };
+
+    let prelude = unit
+        .prelude()
+        .map(|prelude| {
+            files_store
+                .parse_builtins(PRELUDE_PATH, prelude)
+                .map_err(parse_error(Path::new(PRELUDE_PATH)))
+        })
+        .transpose()?;
+
+    let sources = sources
         .iter()
         .map(|file| {
             files_store
                 .parse(&file.path, &file.source)
-                .map_err(|error| CompileError::Parse {
-                    path: file.path.clone(),
-                    error,
-                })
+                .map_err(parse_error(&file.path))
         })
         .collect::<Result<Vec<_>, _>>()?;
+
+    let files: Vec<File> = prelude.into_iter().chain(sources).collect();
 
     let symbol_map = SymbolIndices::build(&files);
     let const_values = ConstValues::build(&files, &symbol_map);

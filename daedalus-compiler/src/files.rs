@@ -39,15 +39,34 @@ impl<'a> Files<'a> {
         Self::default()
     }
 
+    /// Parse a script file, files are numbered in the order they are parsed
     pub fn parse(
         &mut self,
         name: impl Into<OsString>,
         source: &'a str,
     ) -> daedalus_parser::Result<File> {
         self.len += 1;
+        self.parse_with_id(self.len as u32, name, source)
+    }
+
+    /// Parse declarations provided by the engine, they don't take up a file number
+    pub fn parse_builtins(
+        &mut self,
+        name: impl Into<OsString>,
+        source: &'a str,
+    ) -> daedalus_parser::Result<File> {
+        self.parse_with_id(0, name, source)
+    }
+
+    fn parse_with_id(
+        &mut self,
+        id: u32,
+        name: impl Into<OsString>,
+        source: &'a str,
+    ) -> daedalus_parser::Result<File> {
         let id = FileId {
             inner: self.inner.add(name, source),
-            id: self.len as u32,
+            id,
         };
 
         let ast = daedalus_parser::File::parse(&mut DaedalusParser {
