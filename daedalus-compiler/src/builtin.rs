@@ -4,6 +4,14 @@
 /// (`Gothic.src`), in registration order
 pub const GOTHIC_PRELUDE: &str = include_str!("builtin/gothic.d");
 
+pub fn class_offset(name: &str) -> Option<u32> {
+    match name {
+        // Fields come after the zCVob base of oCNpc and oCItem
+        "C_NPC" | "C_ITEM" => Some(288),
+        _ => None,
+    }
+}
+
 /// Address of the engine function implementing an extern, in the `Gothic2.exe` of the Steam
 /// release, as found in its original `GOTHIC.DAT`
 pub fn get_address(name: &str) -> Option<u32> {

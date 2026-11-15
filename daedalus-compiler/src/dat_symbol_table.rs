@@ -207,18 +207,32 @@ impl DatSymbolTable {
         fn_symbol
     }
 
+    /// Class and its fields, `offset` is where the fields start in the engine object
     pub fn class(
         &mut self,
         name: ZString,
         span: SymbolCodeSpan,
         fields: &[(ZString, DataType, u32, SymbolCodeSpan)],
-        offset: i32,
-        address: i32,
+        offset: u32,
     ) -> u32 {
+        let field_size = |data_type: DataType| match data_type {
+            DataType::Float | DataType::Int | DataType::Func => 4,
+            // class zSTRING { int allocater; char* vector; int length; int reserved; }
+            DataType::String => 20,
+            DataType::Void | DataType::Class | DataType::Prototype | DataType::Instance => {
+                unreachable!("{data_type:?} is not a valid class field type")
+            }
+        };
+
+        let size: u32 = fields
+            .iter()
+            .map(|(_, data_type, count, _)| count * field_size(*data_type))
+            .sum();
+
         let class_symbol = self.push_symbol(Symbol {
             name: Some(name.clone()),
             props: Properties {
-                off_cls_ret: offset,
+                off_cls_ret: size as i32,
                 elem_props: {
                     let mut default = ElemProps::default();
                     default.set_count(fields.len() as u32);
@@ -229,11 +243,11 @@ impl DatSymbolTable {
                 },
             },
             code_span: span,
-            data: SymbolData::Address(address),
+            data: SymbolData::ClassOffset(offset),
             parent: None,
         });
 
-        let mut address = address;
+        let mut field_offset = offset;
         for (ident, data_type, count, span) in fields.iter() {
             let mut name = name.clone();
             name.0.push_char('.');
@@ -242,24 +256,10 @@ impl DatSymbolTable {
             self.push_symbol(Symbol {
                 name: Some(name),
                 props: Properties {
-                    off_cls_ret: address,
+                    off_cls_ret: field_offset as i32,
                     elem_props: {
                         let mut default = ElemProps::default();
                         default.set_count(*count);
-
-                        let size = match data_type {
-                            DataType::Void => 0,
-                            DataType::Float => 4,
-                            DataType::Int => 4,
-                            // class zSTRING { int allocater; char* vector; int length; int reserved; }
-                            DataType::String => 20,
-                            DataType::Func => 4,
-                            DataType::Class | DataType::Prototype | DataType::Instance => {
-                                unreachable!("{data_type:?} is not a valid class field type")
-                            }
-                        };
-
-                        address += *count as i32 * size;
                         default.set_data_type(*data_type);
                         default.set_flags(PropFlag::CLASS_VAR);
                         default.set_space(1);
@@ -270,6 +270,8 @@ impl DatSymbolTable {
                 data: SymbolData::None,
                 parent: Some(class_symbol),
             });
+
+            field_offset += count * field_size(*data_type);
         }
 
         class_symbol

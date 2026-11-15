@@ -161,17 +161,8 @@ impl Compiler {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        // TODO: Proper full map of those addresses
-        match name.as_slice() {
-            b"CCAMSYS" => self.symbol_table.class(name, span, &fields, 92, 0),
-            b"C_NPC" => self.symbol_table.class(name, span, &fields, 800, 288),
-            _ => {
-                return Err(Error::unsupported(
-                    &class.ident.span,
-                    format!("class `{name}` of unknown size and offset"),
-                ));
-            }
-        };
+        let offset = builtin::class_offset(&name.to_string()).unwrap_or(0);
+        self.symbol_table.class(name, span, &fields, offset);
 
         Ok(())
     }

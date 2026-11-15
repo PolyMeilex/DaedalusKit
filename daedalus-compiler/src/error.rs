@@ -79,7 +79,13 @@ impl CompileError {
 
 impl fmt::Display for CompileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.path.display(), self.kind)
+        let Range { start, end } = self.span;
+        write!(
+            f,
+            "{} (bytes {start}..{end}): {}",
+            self.path.display(),
+            self.kind
+        )
     }
 }
 
