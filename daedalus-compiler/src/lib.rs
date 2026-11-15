@@ -10,6 +10,7 @@ mod compiler;
 mod const_eval;
 mod dat_symbol_table;
 mod files;
+mod span;
 mod symbol_indices;
 
 use compiler::Compiler;

@@ -13,6 +13,7 @@ use crate::{
     const_eval::{ConstValues, Value},
     dat_symbol_table::DatSymbolTable,
     files::{File, FileId, Files},
+    span::SpanKind,
     symbol_indices::{SymbolIndices, SymbolKind},
 };
 use daedalus_bytecode::Bytecode;
@@ -64,16 +65,7 @@ impl Compiler {
 
             daedalus_parser::Item::Class(class) => {
                 let name = ZString::from(class.ident.raw.as_bytes().to_ascii_uppercase());
-                let span = &class.span;
-
-                let line_start = files.line_index(file_id, span.start as u32).0;
-                let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
-
-                let span = SymbolCodeSpan::new(
-                    file_id.raw(),
-                    (line_start + 1, line_count + 1),
-                    (span.start as u32, span.end as u32 - span.start as u32 + 2),
-                );
+                let span = files.symbol_span(file_id, &class.span, SpanKind::Block);
 
                 let fields: Vec<_> = class
                     .fields
@@ -82,42 +74,7 @@ impl Compiler {
                         let ident = ZString::from(var.ident.raw.as_bytes().to_ascii_uppercase());
                         let ty = DataType::from_str(var.ty.raw.as_str()).unwrap();
 
-                        // Codespans produced by Zengin are either hard for me to understand, or straight
-                        // up broken, so let's make compatibility with them an optional feature
-                        let span = if cfg!(feature = "code-span-compat") {
-                            let mut span = var.span.clone();
-
-                            let line_start = files.line_index(file_id, span.start as u32).0;
-                            let line_count =
-                                files.line_index(file_id, span.end as u32).0 - line_start;
-
-                            // Don't ask me why field span starts at the beginning of the line, this
-                            // is straight up broken, if 2 fields are on the same line, but that's
-                            // what zengine does...
-                            span.start =
-                                files.line_span(file_id, line_start).unwrap().start().0 as usize;
-
-                            // Don't ask me why we add +3 to char_count of a span, we just do as
-                            // that makes it compatible with zengin for some reason
-                            SymbolCodeSpan::new(
-                                file_id.raw(),
-                                (line_start + 1, line_count + 1),
-                                (span.start as u32, span.end as u32 - span.start as u32 + 3),
-                            )
-                        } else {
-                            // Path for sane spans without compatibility with zengin ones
-
-                            let span = &var.span;
-                            let line_start = files.line_index(file_id, span.start as u32).0;
-                            let line_count =
-                                files.line_index(file_id, span.end as u32).0 - line_start;
-
-                            SymbolCodeSpan::new(
-                                file_id.raw(),
-                                (line_start + 1, line_count + 1),
-                                (span.start as u32, span.end as u32 - span.start as u32),
-                            )
-                        };
+                        let span = files.symbol_span(file_id, &var.span, SpanKind::ClassField);
 
                         let count = match &var.kind {
                             daedalus_parser::VarKind::Value { .. } => 1,
@@ -165,16 +122,7 @@ impl Compiler {
                 let parent_data = self.symbol_indices.get(&parent).expect("TODO");
                 let parent_kind = parent_data.kind;
                 let parent_id = parent_data.id;
-                let span = &instance.span;
-
-                let line_start = files.line_index(file_id, span.start as u32).0;
-                let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
-
-                let span = SymbolCodeSpan::new(
-                    file_id.raw(),
-                    (line_start + 1, line_count + 1),
-                    (span.start as u32, span.end as u32 - span.start as u32 + 2),
-                );
+                let span = files.symbol_span(file_id, &instance.span, SpanKind::Block);
 
                 let prototype = if parent_kind == SymbolKind::Prototype {
                     let parent_symbol = &self.symbol_table.symbols[parent_id as usize];
@@ -228,16 +176,7 @@ impl Compiler {
             daedalus_parser::Item::Func(func) => {
                 let ident_utf8 = func.ident.raw.to_ascii_uppercase();
                 let ident = ZString::from(ident_utf8.as_bytes());
-                let span = &func.span;
-
-                let line_start = files.line_index(file_id, span.start as u32).0;
-                let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
-
-                let span = SymbolCodeSpan::new(
-                    file_id.raw(),
-                    (line_start + 1, line_count + 1),
-                    (span.start as u32, span.end as u32 - span.start as u32 + 2),
-                );
+                let span = files.symbol_span(file_id, &func.span, SpanKind::Block);
 
                 let mut block = self.bytecode.block_builder();
 
@@ -256,16 +195,7 @@ impl Compiler {
             daedalus_parser::Item::Const(item) => {
                 let name = ZString::from(item.ident.raw.as_bytes().to_ascii_uppercase());
 
-                let span = &item.span;
-
-                let line_start = files.line_index(file_id, span.start as u32).0;
-                let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
-
-                let span = SymbolCodeSpan::new(
-                    file_id.raw(),
-                    (line_start + 1, line_count + 1),
-                    (span.start as u32, span.end as u32 - span.start as u32 + 3),
-                );
+                let span = files.symbol_span(file_id, &item.span, SpanKind::Const);
 
                 let value = self
                     .const_values
@@ -279,16 +209,7 @@ impl Compiler {
                 let ident = ZString::from(prototype.ident.raw.as_bytes().to_ascii_uppercase());
                 let parent = prototype.parent.raw.to_ascii_uppercase();
                 let parent_id = self.symbol_indices.get(&parent).expect("TODO").id;
-                let span = &prototype.span;
-
-                let line_start = files.line_index(file_id, span.start as u32).0;
-                let line_count = files.line_index(file_id, span.end as u32).0 - line_start;
-
-                let span = SymbolCodeSpan::new(
-                    file_id.raw(),
-                    (line_start + 1, line_count + 1),
-                    (span.start as u32, span.end as u32 - span.start as u32 + 2),
-                );
+                let span = files.symbol_span(file_id, &prototype.span, SpanKind::Block);
 
                 let mut block = self.bytecode.block_builder();
 
