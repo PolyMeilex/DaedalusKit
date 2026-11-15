@@ -22,7 +22,7 @@ pub enum Value {
 /// Const nodes in the tree
 #[derive(Default)]
 struct ConstNodes<'a> {
-    map: HashMap<&'a str, &'a daedalus_parser::Const>,
+    map: HashMap<String, &'a daedalus_parser::Const>,
 }
 
 impl<'a> ConstNodes<'a> {
@@ -40,7 +40,7 @@ impl<'a> ConstNodes<'a> {
 
     fn visit_item(&mut self, item: &'a daedalus_parser::Item) {
         if let daedalus_parser::Item::Const(item) = item {
-            self.map.insert(&item.ident.raw, item);
+            self.map.insert(item.ident.raw.to_ascii_uppercase(), item);
         }
     }
 }
@@ -187,6 +187,8 @@ mod tests {
         const int ABC = 5;
         const int CBA = ABC + 1;
         const int PAREN = (CBA + 1) * 2;
+        const int lower = 2;
+        const int UPPER = LOWER * 3;
         "};
 
         let mut files_store = Files::new();
@@ -200,5 +202,6 @@ mod tests {
         assert!(diagnostics.into_errors().is_empty());
         assert!(matches!(values.map["CBA"], Value::Int(6)));
         assert!(matches!(values.map["PAREN"], Value::Int(14)));
+        assert!(matches!(values.map["UPPER"], Value::Int(6)));
     }
 }
