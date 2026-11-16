@@ -247,16 +247,24 @@ impl DatSymbolTable {
         &mut self,
         name: ZString,
         code_span: SymbolCodeSpan,
+        data_type: DataType,
         data: SymbolData,
     ) -> u32 {
+        let count = match &data {
+            SymbolData::Int(v) => v.len(),
+            SymbolData::Float(v) => v.len(),
+            SymbolData::String(v) => v.len(),
+            _ => unreachable!("constants hold values"),
+        };
+
         self.push_symbol(Symbol {
             name: Some(name),
             props: Properties {
                 off_cls_ret: 0,
                 elem_props: {
                     let mut default = ElemProps::default();
-                    default.set_count(1);
-                    default.set_data_type(DataType::Int);
+                    default.set_count(count as u32);
+                    default.set_data_type(data_type);
                     default.set_flags(PropFlag::CONST);
                     default.set_space(1);
                     default

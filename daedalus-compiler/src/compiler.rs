@@ -13,6 +13,7 @@ use crate::{
     codegen::BlockBuilder,
     const_eval::{ConstValues, Value},
     dat_symbol_table::DatSymbolTable,
+    encoding::script_string,
     error::{Diagnostics, Error, ErrorKind, Result},
     files::{File, FileId, Files},
     span::SpanKind,
@@ -369,27 +370,89 @@ impl Compiler {
         let name = ZString::from(item.ident.raw.as_bytes().to_ascii_uppercase());
         let span = files.symbol_span(file_id, &item.span, SpanKind::Const);
 
-        let data = match self
+        let Some(value) = self
             .const_values
             .map
             .get(&item.ident.raw.to_ascii_uppercase())
-        {
-            Some(Value::Int(v)) => SymbolData::Int(vec![*v]),
-            Some(Value::Float(v)) => SymbolData::Float(vec![*v]),
-            Some(Value::String(_)) => {
-                return Err(Error::unsupported(&item.span, "string constants"));
-            }
-            Some(Value::Array(_)) => {
-                return Err(Error::unsupported(&item.span, "array constants"));
-            }
-            Some(Value::Symbol(_)) => {
-                return Err(Error::unsupported(&item.span, "symbol reference constants"));
-            }
+        else {
             // Evaluation failed, which was already reported
-            None => return Ok(()),
+            return Ok(());
         };
 
-        self.symbol_table.const_item(name, span, data);
+        let values = match (&item.kind, value) {
+            (daedalus_parser::ConstKind::Value { .. }, value) => std::slice::from_ref(value),
+            (daedalus_parser::ConstKind::Array { size_init, .. }, Value::Array(values)) => {
+                let size = self.array_size(size_init)?;
+                if values.len() != size as usize {
+                    return Err(Error::invalid(
+                        &item.span,
+                        format!(
+                            "array of size {size} initialized with {} values",
+                            values.len()
+                        ),
+                    ));
+                }
+                values.as_slice()
+            }
+            (daedalus_parser::ConstKind::Array { .. }, _) => {
+                unreachable!("array constants evaluate to arrays")
+            }
+        };
+
+        let data_type = data_type(&item.span, &item.ty)?;
+        let mismatch = || Error::invalid(&item.span, format!("value is not a {data_type:?}"));
+
+        let (stored_type, data) = match data_type {
+            DataType::Int => {
+                let values = values.iter().map(|value| match value {
+                    Value::Int(v) => Ok(*v),
+                    _ => Err(mismatch()),
+                });
+                (
+                    DataType::Int,
+                    SymbolData::Int(values.collect::<Result<_>>()?),
+                )
+            }
+            DataType::Float => {
+                let values = values.iter().map(|value| match value {
+                    Value::Float(v) => Ok(*v),
+                    Value::Int(v) => Ok(*v as f32),
+                    _ => Err(mismatch()),
+                });
+                (
+                    DataType::Float,
+                    SymbolData::Float(values.collect::<Result<_>>()?),
+                )
+            }
+            DataType::String => {
+                let values = values.iter().map(|value| match value {
+                    Value::String(v) => Ok(script_string(v)),
+                    _ => Err(mismatch()),
+                });
+                (
+                    DataType::String,
+                    SymbolData::String(values.collect::<Result<_>>()?),
+                )
+            }
+            DataType::Func => {
+                let values = values.iter().map(|value| match value {
+                    Value::Symbol(id) => Ok(*id as i32),
+                    _ => Err(mismatch()),
+                });
+                (
+                    DataType::Int,
+                    SymbolData::Int(values.collect::<Result<_>>()?),
+                )
+            }
+            _ => {
+                return Err(Error::unsupported(
+                    &item.span,
+                    format!("constants of type {data_type:?}"),
+                ));
+            }
+        };
+
+        self.symbol_table.const_item(name, span, stored_type, data);
 
         Ok(())
     }
