@@ -13,7 +13,7 @@ use crate::{
     codegen::BlockBuilder,
     const_eval::{ConstValues, Value},
     dat_symbol_table::DatSymbolTable,
-    encoding::script_string,
+    encoding::{script_string, symbol_name},
     error::{Diagnostics, Error, ErrorKind, Result},
     files::{File, FileId, Files},
     span::SpanKind,
@@ -90,14 +90,14 @@ impl Compiler {
         file_id: FileId,
         func: &daedalus_parser::ExternFunctionDefinition,
     ) -> Result<()> {
-        let name = ZString::from(func.ident.raw.as_bytes().to_ascii_uppercase());
+        let name = symbol_name(&func.ident.raw);
         let ty = data_type(&func.ident.span, &func.ty)?;
 
         let args = func
             .args
             .iter()
             .map(|var| {
-                let ident = ZString::from(var.ident.raw.as_bytes());
+                let ident = symbol_name(&var.ident.raw);
                 let ty = data_type(&var.span, &var.ty)?;
 
                 Ok((ident, ty, SymbolCodeSpan::empty(file_id.raw())))
@@ -128,14 +128,14 @@ impl Compiler {
         file_id: FileId,
         class: &daedalus_parser::Class,
     ) -> Result<()> {
-        let name = ZString::from(class.ident.raw.as_bytes().to_ascii_uppercase());
+        let name = symbol_name(&class.ident.raw);
         let span = files.symbol_span(file_id, &class.span, SpanKind::Block);
 
         let fields = class
             .fields
             .iter()
             .map(|var| {
-                let ident = ZString::from(var.ident.raw.as_bytes().to_ascii_uppercase());
+                let ident = symbol_name(&var.ident.raw);
                 let ty = data_type(&var.span, &var.ty)?;
                 if !matches!(
                     ty,
@@ -172,7 +172,7 @@ impl Compiler {
         file_id: FileId,
         var: &daedalus_parser::Var,
     ) -> Result<()> {
-        let name = ZString::from(var.ident.raw.as_bytes().to_ascii_uppercase());
+        let name = symbol_name(&var.ident.raw);
         let span = files.symbol_span(file_id, &var.span, SpanKind::Var);
         let (data_type, parent) = self.var_type(&var.span, &var.ty)?;
 
@@ -247,7 +247,7 @@ impl Compiler {
         file_id: FileId,
         instance: &daedalus_parser::Instance,
     ) -> Result<()> {
-        let ident = ZString::from(instance.ident.raw.as_bytes().to_ascii_uppercase());
+        let ident = symbol_name(&instance.ident.raw);
         let parent = instance.parent.raw.to_ascii_uppercase();
         let parent_data = *self.lookup(&instance.parent.span, &parent)?;
         let span = files.symbol_span(file_id, &instance.span, SpanKind::Block);
@@ -318,7 +318,7 @@ impl Compiler {
         func: &daedalus_parser::FunctionDefinition,
     ) -> Result<()> {
         let ident_utf8 = func.ident.raw.to_ascii_uppercase();
-        let ident = ZString::from(ident_utf8.as_bytes());
+        let ident = symbol_name(&ident_utf8);
         let span = files.symbol_span(file_id, &func.span, SpanKind::Block);
 
         let ret = data_type(&func.ident.span, &func.ty)?;
@@ -367,7 +367,7 @@ impl Compiler {
         file_id: FileId,
         item: &daedalus_parser::Const,
     ) -> Result<()> {
-        let name = ZString::from(item.ident.raw.as_bytes().to_ascii_uppercase());
+        let name = symbol_name(&item.ident.raw);
         let span = files.symbol_span(file_id, &item.span, SpanKind::Const);
 
         let Some(value) = self
@@ -463,7 +463,7 @@ impl Compiler {
         file_id: FileId,
         prototype: &daedalus_parser::Prototype,
     ) -> Result<()> {
-        let ident = ZString::from(prototype.ident.raw.as_bytes().to_ascii_uppercase());
+        let ident = symbol_name(&prototype.ident.raw);
         let parent = prototype.parent.raw.to_ascii_uppercase();
         let parent_id = self.lookup(&prototype.parent.span, &parent)?.id;
         let span = files.symbol_span(file_id, &prototype.span, SpanKind::Block);
@@ -491,7 +491,7 @@ impl Compiler {
 }
 
 fn member_name(parent: &str, member: &daedalus_parser::Ident) -> ZString {
-    ZString::from(format!("{parent}.{}", member.raw.to_ascii_uppercase()).as_bytes())
+    symbol_name(&format!("{parent}.{}", member.raw))
 }
 
 fn data_type(span: &Range<usize>, ty: &daedalus_parser::Ty) -> Result<DataType> {
