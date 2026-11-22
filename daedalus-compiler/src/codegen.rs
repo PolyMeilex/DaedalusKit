@@ -19,8 +19,13 @@ use crate::{
 pub enum Scope<'a> {
     /// Upper cased name of the function, whose parameters and locals are in scope
     Function(&'a str),
-    /// Upper cased name of the class of the instance or prototype, whose fields are in scope
-    Instance(&'a str),
+    /// Instance or prototype, whose class fields are in scope
+    Instance {
+        /// Upper cased name of the class
+        class: &'a str,
+        /// Upper cased name of the instance, aka. `self`
+        instance: Option<&'a str>,
+    },
 }
 
 pub struct BlockBuilder<'a, 'b> {
@@ -256,7 +261,10 @@ impl BlockBuilder<'_, '_> {
                 }
             },
             ExprKind::Ident(ident) => match self.resolve(ident) {
-                Ok(symbol) => self.push_symbol(symbol, expected),
+                Ok(symbol) => {
+                    let symbol = self.instance_self(symbol, expected);
+                    self.push_symbol(symbol, expected)
+                }
                 // TODO: Kinda shit hardcoding this here, but I want it to get to compile G2NotR first before cleaning this up
                 Err(err) => match ident.raw.to_ascii_uppercase().as_str() {
                     // No function, an invalid symbol id
@@ -328,6 +336,30 @@ impl BlockBuilder<'_, '_> {
         Ok(data_type)
     }
 
+    fn instance_self(&self, symbol: Symbol, expected: DataType) -> Symbol {
+        let Scope::Instance {
+            instance: Some(instance),
+            ..
+        } = self.scope
+        else {
+            return symbol;
+        };
+
+        if expected != DataType::Instance || self.symbol_indices.name(symbol.id) != "SELF" {
+            return symbol;
+        }
+
+        let instance = self
+            .symbol_indices
+            .get(instance)
+            .expect("instance is declared");
+        Symbol {
+            id: instance.id,
+            kind: instance.kind,
+            data_type: DataType::Instance,
+        }
+    }
+
     fn push_float(&mut self, value: f32) {
         // The VM stack holds ints, floats are pushed as their bits
         let bits = i32::from_le_bytes(value.to_le_bytes());
@@ -339,11 +371,13 @@ impl BlockBuilder<'_, '_> {
             (SymbolKind::Function | SymbolKind::ExternFunction, _) => {
                 (Instruction::push_int(symbol.id as i32), DataType::Func)
             }
-            (_, DataType::Instance) if expected == DataType::Instance => (
+            (_, DataType::Instance | DataType::Prototype) if expected == DataType::Instance => (
                 Instruction::push_var_instance(symbol.id),
                 DataType::Instance,
             ),
-            (_, DataType::Instance) => (Instruction::push_int(symbol.id as i32), DataType::Int),
+            (_, DataType::Instance | DataType::Prototype) => {
+                (Instruction::push_int(symbol.id as i32), DataType::Int)
+            }
             (_, data_type) => (Instruction::push_var(symbol.id), data_type),
         };
 
@@ -406,7 +440,9 @@ impl BlockBuilder<'_, '_> {
     fn resolve(&self, ident: &Ident) -> Result<Symbol> {
         let name = ident.raw.to_ascii_uppercase();
         let scoped = match self.scope {
-            Scope::Function(parent) | Scope::Instance(parent) => format!("{parent}.{name}"),
+            Scope::Function(parent) | Scope::Instance { class: parent, .. } => {
+                format!("{parent}.{name}")
+            }
         };
 
         let index = self

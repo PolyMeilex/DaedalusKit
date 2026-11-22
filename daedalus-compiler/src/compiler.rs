@@ -325,7 +325,10 @@ impl Compiler {
         }
 
         let builder = BlockBuilder {
-            scope: Scope::Instance(&class),
+            scope: Scope::Instance {
+                class: &class,
+                instance: Some(&instance.ident.raw.to_ascii_uppercase()),
+            },
             symbol_indices: &self.symbol_indices,
             symbol_table: &mut self.symbol_table,
             const_values: &self.const_values,
@@ -531,7 +534,10 @@ impl Compiler {
         self.start_body(&prototype.ident)?;
         let mut block = self.bytecode.block_builder();
         let builder = BlockBuilder {
-            scope: Scope::Instance(&parent),
+            scope: Scope::Instance {
+                class: &parent,
+                instance: None,
+            },
             symbol_indices: &self.symbol_indices,
             symbol_table: &mut self.symbol_table,
             const_values: &self.const_values,
