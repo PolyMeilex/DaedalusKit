@@ -91,9 +91,36 @@ impl<'a> BytecodeBlockBuilder<'a> {
         self
     }
 
-    pub fn call(&mut self, symbol: u32) -> &mut Self {
-        self.encode(&Instruction::call(symbol));
+    pub fn call(&mut self, address: u32) -> &mut Self {
+        self.encode(&Instruction::call(address));
         self
+    }
+
+    /// Address of the next instruction
+    pub fn position(&self) -> u32 {
+        self.bytecode.len() as u32
+    }
+
+    /// Jump (`B` or `Bz`) to an address that is not known yet, see [`Self::bind`]
+    pub fn forward_jump(&mut self, opcode: Opcode) -> Label {
+        assert!(
+            matches!(opcode, Opcode::B | Opcode::Bz),
+            "{opcode:?} is not a jump"
+        );
+
+        self.encode(&Instruction {
+            opcode,
+            data: InstructionData::Address(0),
+        });
+
+        // The address is the last operand of the jump
+        Label(self.bytecode.len() - std::mem::size_of::<u32>())
+    }
+
+    /// Make a forward jump target the next instruction
+    pub fn bind(&mut self, label: Label) {
+        let target = self.position().to_le_bytes();
+        self.bytecode[label.0..label.0 + target.len()].copy_from_slice(&target);
     }
 
     pub fn ret(&mut self) -> &mut Self {
@@ -139,6 +166,10 @@ impl<'a> BytecodeBlockBuilder<'a> {
         self.addr
     }
 }
+
+#[derive(Debug)]
+#[must_use = "a forward jump has to be bound to its target"]
+pub struct Label(usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Instruction {
@@ -275,11 +306,34 @@ impl Instruction {
         }
     }
 
-    pub fn call(symbol: u32) -> Self {
+    pub fn call(address: u32) -> Self {
         Self {
             opcode: Opcode::Call,
+            data: InstructionData::Address(address),
+        }
+    }
+
+    /// Set the instance whose fields are accessed by the following instructions
+    pub fn set_instance(symbol: u32) -> Self {
+        Self {
+            opcode: Opcode::GMovI,
             data: InstructionData::Symbol(symbol),
         }
+    }
+
+    /// Instruction without an operand, like arithmetic, comparisons or moves
+    pub fn op(opcode: Opcode) -> Self {
+        let instruction = Self {
+            opcode,
+            data: InstructionData::None,
+        };
+        // Decoding knows which opcodes have operands
+        debug_assert_eq!(
+            Instruction::decode(std::io::Cursor::new([opcode as u8])).ok(),
+            Some(instruction.clone()),
+            "{opcode:?} has an operand"
+        );
+        instruction
     }
 
     pub fn negate() -> Self {
@@ -448,4 +502,24 @@ pub enum Opcode {
     /// Push the element at the given index of the symbol with the index provided in the
     /// instruction onto the stack as a reference.
     PushVV = 245,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn forward_jump() {
+        let mut bytecode = Bytecode::new();
+        let mut block = bytecode.block_builder();
+        block.push_instruction(Instruction::push_int(1));
+        let label = block.forward_jump(Opcode::Bz);
+        block.ret();
+        block.bind(label);
+        block.ret();
+
+        let instructions: Vec<_> = bytecode.instructions().collect();
+        // push_int (5 bytes) + bz (5 bytes) + ret (1 byte)
+        assert_eq!(instructions[1].data, InstructionData::Address(11));
+    }
 }
