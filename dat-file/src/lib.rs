@@ -643,3 +643,26 @@ pub fn debug_print(dat: &DatFile) {
         println!("non_ascii: {}", symbol.name.as_ref().unwrap());
     }
 }
+
+// TODO: Kinda unreadable output, nice diffing algo would be cool
+pub fn diff(dat_a: DatFile, dat_b: DatFile) {
+    assert_eq!(dat_a.sort_indexes, dat_b.sort_indexes);
+    assert_eq!(dat_a.symbols.len(), dat_b.symbols.len());
+
+    for (a, b) in dat_a.symbols.iter().zip(dat_b.symbols.iter()) {
+        assert_eq!(a, b);
+    }
+
+    assert_eq!(
+        dat_a.bytecode.as_bytes().len(),
+        dat_b.bytecode.as_bytes().len()
+    );
+
+    for (a, b) in dat_a
+        .bytecode
+        .instructions()
+        .zip(dat_b.bytecode.instructions())
+    {
+        assert_eq!(a, b);
+    }
+}

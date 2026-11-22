@@ -3,31 +3,6 @@ use std::{io::Cursor, path::PathBuf};
 use daedalus_compiler::{CompilationUnit, SourceFile};
 use dat_file::DatFile;
 
-use pretty_assertions::assert_eq;
-
-// TODO: Kinda unreadable output, nice diffing algo would be cool
-fn diff(dat_a: dat_file::DatFile, dat_b: dat_file::DatFile) {
-    assert_eq!(dat_a.sort_indexes, dat_b.sort_indexes);
-    assert_eq!(dat_a.symbols.len(), dat_b.symbols.len());
-
-    for (a, b) in dat_a.symbols.iter().zip(dat_b.symbols.iter()) {
-        assert_eq!(a, b);
-    }
-
-    assert_eq!(
-        dat_a.bytecode.as_bytes().len(),
-        dat_b.bytecode.as_bytes().len()
-    );
-
-    for (a, b) in dat_a
-        .bytecode
-        .instructions()
-        .zip(dat_b.bytecode.instructions())
-    {
-        assert_eq!(a, b);
-    }
-}
-
 fn guess_game_dir() -> Option<PathBuf> {
     let mut home = PathBuf::from(std::env::var("HOME").ok()?);
     home.push(".local/share/Steam/steamapps/common/Gothic II");
@@ -60,7 +35,7 @@ fn check_unit(unit: CompilationUnit, src: &str, dat: &str) {
     let expected = decode(&expected);
     let compiled = decode(&compiled);
 
-    diff(compiled, expected);
+    dat_file::diff(compiled, expected);
 }
 
 #[test]
