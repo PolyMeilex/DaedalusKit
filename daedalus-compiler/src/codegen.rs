@@ -98,8 +98,8 @@ impl BlockBuilder<'_, '_> {
             ExprKind::Binary(op, left, right) if is_assignment(op) => {
                 self.visit_assignment(op, left, right)
             }
-            ExprKind::Call(call) => self.visit_call(call).map(|_| ()),
-            _ => Err(Error::unsupported(&expr.span, "expression statement")),
+            // The value is left on the stack
+            _ => self.push_value(expr, DataType::Void).map(|_| ()),
         }
     }
 
@@ -215,7 +215,7 @@ impl BlockBuilder<'_, '_> {
 
         if !matches!(
             symbol.kind,
-            SymbolKind::Var | SymbolKind::FunctionArg | SymbolKind::ClassVar
+            SymbolKind::Var | SymbolKind::FunctionArg | SymbolKind::ClassVar | SymbolKind::Instance
         ) {
             return Err(Error::invalid(&expr.span, "can not be assigned to"));
         }
@@ -255,10 +255,27 @@ impl BlockBuilder<'_, '_> {
                     DataType::String
                 }
             },
-            ExprKind::Ident(ident) => {
-                let symbol = self.resolve(ident)?;
-                self.push_symbol(symbol, expected)
-            }
+            ExprKind::Ident(ident) => match self.resolve(ident) {
+                Ok(symbol) => self.push_symbol(symbol, expected),
+                // TODO: Kinda shit hardcoding this here, but I want it to get to compile G2NotR first before cleaning this up
+                Err(err) => match ident.raw.to_ascii_uppercase().as_str() {
+                    // No function, an invalid symbol id
+                    "NOFUNC" => {
+                        self.block.push_instruction(Instruction::push_int(-1));
+                        DataType::Func
+                    }
+                    // No instance, the instance helper symbol stands in for it
+                    "NULL" => {
+                        let instance_help = Symbol {
+                            id: 0,
+                            kind: SymbolKind::Other,
+                            data_type: DataType::Instance,
+                        };
+                        self.push_symbol(instance_help, expected)
+                    }
+                    _ => return Err(err),
+                },
+            },
             ExprKind::Field(instance, field) => {
                 let instance = self.instance(instance)?;
                 let field = self.field(instance, field)?;
