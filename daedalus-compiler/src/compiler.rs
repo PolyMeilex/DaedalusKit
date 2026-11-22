@@ -10,7 +10,7 @@ use zstring::ZString;
 
 use crate::{
     builtin,
-    codegen::BlockBuilder,
+    codegen::{BlockBuilder, Scope},
     const_eval::{ConstValues, Value},
     dat_symbol_table::DatSymbolTable,
     encoding::{script_string, symbol_name},
@@ -325,9 +325,10 @@ impl Compiler {
         }
 
         let builder = BlockBuilder {
-            parent: &class,
+            scope: Scope::Instance(&class),
             symbol_indices: &self.symbol_indices,
             symbol_table: &mut self.symbol_table,
+            const_values: &self.const_values,
             block: &mut block,
             calls: &mut self.calls,
         };
@@ -401,9 +402,10 @@ impl Compiler {
         self.start_body(&func.ident)?;
         let mut block = self.bytecode.block_builder();
         let builder = BlockBuilder {
-            parent: &name,
+            scope: Scope::Function(&name),
             symbol_indices: &self.symbol_indices,
             symbol_table: &mut self.symbol_table,
+            const_values: &self.const_values,
             block: &mut block,
             calls: &mut self.calls,
         };
@@ -529,9 +531,10 @@ impl Compiler {
         self.start_body(&prototype.ident)?;
         let mut block = self.bytecode.block_builder();
         let builder = BlockBuilder {
-            parent: &parent,
+            scope: Scope::Instance(&parent),
             symbol_indices: &self.symbol_indices,
             symbol_table: &mut self.symbol_table,
+            const_values: &self.const_values,
             block: &mut block,
             calls: &mut self.calls,
         };
