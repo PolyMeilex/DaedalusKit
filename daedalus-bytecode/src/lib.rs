@@ -139,40 +139,6 @@ impl<'a> BytecodeBlockBuilder<'a> {
         self
     }
 
-    pub fn var_assign_int(&mut self, (array_symbol, id): (u32, u8), value: i32) -> &mut Self {
-        self.encode(&Instruction::push_int(value));
-        if id == 0 {
-            self.encode(&Instruction::push_var(array_symbol));
-        } else {
-            self.encode(&Instruction::push_var_array(array_symbol, id));
-        }
-        self.encode(&Instruction::mov_int());
-        self
-    }
-
-    pub fn instance_assign_int(&mut self, (array_symbol, id): (u32, u8), value: i32) -> &mut Self {
-        self.encode(&Instruction::push_int(value));
-        if id == 0 {
-            self.encode(&Instruction::push_var(array_symbol));
-        } else {
-            self.encode(&Instruction::push_var_array(array_symbol, id));
-        }
-        self.encode(&Instruction::mov_int());
-        self
-    }
-
-    pub fn var_assign_float(&mut self, (array_symbol, id): (u32, u8), value: f32) -> &mut Self {
-        let value = i32::from_le_bytes(value.to_le_bytes());
-        self.encode(&Instruction::push_int(value));
-        if id == 0 {
-            self.encode(&Instruction::push_var(array_symbol));
-        } else {
-            self.encode(&Instruction::push_var_array(array_symbol, id));
-        }
-        self.encode(&Instruction::mov_float());
-        self
-    }
-
     pub fn addr(&self) -> u32 {
         self.addr
     }
@@ -266,41 +232,6 @@ impl Instruction {
         }
     }
 
-    pub fn mov_int() -> Self {
-        Self {
-            opcode: Opcode::MovInt,
-            data: InstructionData::None,
-        }
-    }
-
-    pub fn mov_float() -> Self {
-        Self {
-            opcode: Opcode::MovF,
-            data: InstructionData::None,
-        }
-    }
-
-    pub fn mov_string() -> Self {
-        Self {
-            opcode: Opcode::MovS,
-            data: InstructionData::None,
-        }
-    }
-
-    pub fn mov_func() -> Self {
-        Self {
-            opcode: Opcode::MovVF,
-            data: InstructionData::None,
-        }
-    }
-
-    pub fn mov_instance() -> Self {
-        Self {
-            opcode: Opcode::MovVI,
-            data: InstructionData::None,
-        }
-    }
-
     pub fn push_var_array(symbol: u32, index: u8) -> Self {
         Self {
             opcode: Opcode::PushVV,
@@ -350,13 +281,6 @@ impl Instruction {
             "{opcode:?} has an operand"
         );
         instruction
-    }
-
-    pub fn negate() -> Self {
-        Self {
-            opcode: Opcode::Negate,
-            data: InstructionData::None,
-        }
     }
 
     pub fn ret() -> Self {
