@@ -1,6 +1,9 @@
 #![allow(unused)]
 
-use std::ffi::{OsStr, OsString};
+use std::{
+    collections::HashMap,
+    ffi::{OsStr, OsString},
+};
 
 use codespan::{ByteIndex, LineIndex, Location};
 use codespan_reporting::files::Error;
@@ -31,7 +34,41 @@ impl FileId {
 #[derive(Debug, Default)]
 pub struct Files<'a> {
     inner: codespan::Files<&'a str>,
+    offsets: HashMap<codespan::FileId, SourceOffsets>,
     len: usize,
+}
+
+/// Kinda shity way to map byte offsets of the UTF-8 decoded source to offsets in the original
+#[derive(Debug, Default)]
+struct SourceOffsets {
+    multi_byte: Vec<(usize, usize)>,
+}
+
+impl SourceOffsets {
+    fn new(source: &str) -> Self {
+        let mut extra = 0;
+        let multi_byte = source
+            .char_indices()
+            .filter(|(_, c)| c.len_utf8() > 1)
+            .map(|(offset, c)| {
+                extra += c.len_utf8() - 1;
+                (offset + c.len_utf8(), extra)
+            })
+            .collect();
+
+        Self { multi_byte }
+    }
+
+    fn source_offset(&self, utf8_offset: usize) -> usize {
+        let before = self
+            .multi_byte
+            .partition_point(|(end, _)| *end <= utf8_offset);
+        let extra = before
+            .checked_sub(1)
+            .map_or(0, |last| self.multi_byte[last].1);
+
+        utf8_offset - extra
+    }
 }
 
 impl<'a> Files<'a> {
@@ -68,12 +105,18 @@ impl<'a> Files<'a> {
             inner: self.inner.add(name, source),
             id,
         };
+        self.offsets.insert(id.inner, SourceOffsets::new(source));
 
         let ast = daedalus_parser::File::parse(&mut DaedalusParser {
             lexer: &mut DaedalusLexer::new(source),
         })?;
 
         Ok(File { id, ast })
+    }
+
+    /// returns: Offset in the original single byte encoded file
+    pub fn source_offset(&self, file_id: FileId, byte_index: usize) -> u32 {
+        self.offsets[&file_id.inner].source_offset(byte_index) as u32
     }
 
     /// Get the name of the source file.
@@ -211,5 +254,29 @@ impl<'a> Files<'a> {
         span: impl Into<codespan::Span>,
     ) -> Result<&str, Error> {
         self.inner.source_slice(file_id.inner, span)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SourceOffsets;
+
+    #[test]
+    fn source_offsets() {
+        let offsets = SourceOffsets::new("ab\u{17c}cd\u{17c}\u{17c}e");
+        // a b ż c d ż ż e
+        let expected = [
+            (0, 0),
+            (2, 2),
+            (4, 3),
+            (5, 4),
+            (6, 5),
+            (8, 6),
+            (10, 7),
+            (11, 8),
+        ];
+        for (utf8, source) in expected {
+            assert_eq!(offsets.source_offset(utf8), source, "offset {utf8}");
+        }
     }
 }

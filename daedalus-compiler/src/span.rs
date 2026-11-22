@@ -40,16 +40,18 @@ impl Files<'_> {
 
         // Class field spans start at the beginning of the line, which is plain wrong if 2
         // fields are on the same line, but that's what ZenGin does
-        let char_start = if compat && kind == SpanKind::Member {
+        let start = if compat && kind == SpanKind::Member {
             self.line_span(file, line_start)
                 .expect("line index comes from this file")
                 .start()
-                .0
+                .to_usize()
         } else {
-            span.start as u32
+            span.start
         };
 
-        let mut char_count = span.end as u32 - char_start;
+        let char_start = self.source_offset(file, start);
+        let mut char_count = self.source_offset(file, span.end) - char_start;
+
         if compat {
             char_count += kind.char_count_padding();
         }
