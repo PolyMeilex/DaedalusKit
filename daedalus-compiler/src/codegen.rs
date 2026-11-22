@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use daedalus_bytecode::Instruction;
+use daedalus_bytecode::{Instruction, Label};
 use daedalus_parser::{AssocOp, BlockItem, Expr, ExprKind, FunctionCall, Ident, Lit, LitKind};
 use dat_file::properties::{DataType, PropFlag};
 
@@ -16,6 +16,8 @@ pub struct BlockBuilder<'a, 'b> {
     pub(crate) symbol_indices: &'a SymbolIndices,
     pub(crate) symbol_table: &'a mut DatSymbolTable,
     pub(crate) block: &'a mut daedalus_bytecode::BytecodeBlockBuilder<'b>,
+    /// Calls to patch with the address of the function
+    pub(crate) calls: &'a mut Vec<(Label, u32)>,
 }
 
 impl<'a, 'b> BlockBuilder<'a, 'b> {
@@ -210,7 +212,7 @@ impl<'a, 'b> BlockBuilder<'a, 'b> {
                 self.block.extend(&[Instruction::call_extern(symbol.id)]);
             }
             SymbolKind::Function => {
-                self.block.extend(&[Instruction::call(symbol.id)]);
+                self.calls.push((self.block.call_later(), symbol.id));
             }
             _ => {
                 return Err(Error::invalid(

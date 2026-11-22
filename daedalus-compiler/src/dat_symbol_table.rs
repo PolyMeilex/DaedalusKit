@@ -398,6 +398,25 @@ impl DatSymbolTable {
             .filter(|symbol| symbol.name.is_some())
     }
 
+    /// Set the address of the body of a function, instance or prototype
+    pub fn set_body_address(&mut self, id: u32, address: u32) {
+        let symbol = &mut self.symbols[id as usize];
+        assert!(
+            matches!(symbol.data, SymbolData::Address(_)),
+            "{:?} has no body",
+            symbol.name
+        );
+        symbol.data = SymbolData::Address(address as i32);
+    }
+
+    /// Address of the body of a function, instance or prototype, unless it failed to compile
+    pub fn body_address(&self, id: u32) -> Option<u32> {
+        match self.get(id)?.data {
+            SymbolData::Address(address) => Some(address as u32),
+            _ => None,
+        }
+    }
+
     /// After an item failed to compile, drop the symbols it partially emitted, and fill its slots
     /// with unnamed placeholders, so that ids of later symbols still match [`SymbolIndices`]
     pub fn recover_to(&mut self, len: usize) {

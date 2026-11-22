@@ -1,6 +1,6 @@
 use std::{ops::Range, str::FromStr};
 
-use daedalus_bytecode::Bytecode;
+use daedalus_bytecode::{Bytecode, Label};
 use daedalus_parser::{Expr, ExprKind, LitKind};
 use dat_file::{
     SymbolData,
@@ -25,6 +25,8 @@ pub struct Compiler {
     const_values: ConstValues,
     symbol_table: DatSymbolTable,
     bytecode: Bytecode,
+    /// Calls to patch with the address of the function, once every body has one
+    calls: Vec<(Label, u32)>,
 }
 
 impl Compiler {
@@ -34,6 +36,7 @@ impl Compiler {
             symbol_indices,
             const_values,
             bytecode: Bytecode::new(),
+            calls: Vec::new(),
         }
     }
 
@@ -47,14 +50,36 @@ impl Compiler {
         span_files: &Files,
         diagnostics: &mut Diagnostics,
     ) -> Vec<u8> {
-        for File { id, ast } in files.iter() {
-            for item in ast.items.iter() {
-                let len = self.symbol_table.len() + item_symbols(item).len();
+        let items = || {
+            files
+                .iter()
+                .flat_map(|file| file.ast.items.iter().map(|item| (file.id, item)))
+        };
 
-                if let Err(err) = self.handle_item(span_files, *id, item) {
-                    diagnostics.report(*id, err);
-                    self.symbol_table.recover_to(len);
-                }
+        // Symbols first, so that bodies can refer to any symbol and know its type
+        let mut declared = Vec::new();
+        for (file_id, item) in items() {
+            let len = self.symbol_table.len() + item_symbols(item).len();
+
+            let result = self.declare_item(span_files, file_id, item);
+            declared.push(result.is_ok());
+            if let Err(err) = result {
+                diagnostics.report(file_id, err);
+                self.symbol_table.recover_to(len);
+            }
+        }
+
+        for ((file_id, item), declared) in items().zip(declared) {
+            if declared && let Err(err) = self.define_item(item) {
+                diagnostics.report(file_id, err);
+            }
+        }
+
+        for (label, function) in std::mem::take(&mut self.calls) {
+            if let Some(address) = self.symbol_table.body_address(function) {
+                self.bytecode.patch(label, address);
+            } else {
+                // Functions that failed to compile have no address, which was already reported
             }
         }
 
@@ -66,7 +91,8 @@ impl Compiler {
         out
     }
 
-    fn handle_item(
+    /// Emit the symbols of an item
+    fn declare_item(
         &mut self,
         files: &Files,
         file_id: FileId,
@@ -83,6 +109,29 @@ impl Compiler {
             }
             daedalus_parser::Item::Var(var) => self.global_var(files, file_id, var),
         }
+    }
+
+    /// Emit the body of an item, if it has one
+    fn define_item(&mut self, item: &daedalus_parser::Item) -> Result<()> {
+        match item {
+            daedalus_parser::Item::Instance(instance) => self.define_instance(instance),
+            daedalus_parser::Item::Func(func) => self.define_func(func),
+            daedalus_parser::Item::Prototype(prototype) => self.define_prototype(prototype),
+            daedalus_parser::Item::ExternFunc(_)
+            | daedalus_parser::Item::Class(_)
+            | daedalus_parser::Item::Const(_)
+            | daedalus_parser::Item::Var(_) => Ok(()),
+        }
+    }
+
+    /// Set the address of a body that starts at the end of the bytecode
+    fn start_body(&mut self, ident: &daedalus_parser::Ident) -> Result<()> {
+        let id = self
+            .lookup(&ident.span, &ident.raw.to_ascii_uppercase())?
+            .id;
+        let address = self.bytecode.next_available_address();
+        self.symbol_table.set_body_address(id, address);
+        Ok(())
     }
 
     fn extern_func(
@@ -249,39 +298,45 @@ impl Compiler {
     ) -> Result<()> {
         let ident = symbol_name(&instance.ident.raw);
         let parent = instance.parent.raw.to_ascii_uppercase();
-        let parent_data = *self.lookup(&instance.parent.span, &parent)?;
+        let parent_id = self.lookup(&instance.parent.span, &parent)?.id;
         let span = files.symbol_span(file_id, &instance.span, SpanKind::Block);
 
-        let prototype = if parent_data.kind == SymbolKind::Prototype {
-            Some(self.prototype_of_instance(&instance.parent.span, parent_data.id)?)
+        self.symbol_table.instance(ident, span, 0, parent_id);
+
+        Ok(())
+    }
+
+    fn define_instance(&mut self, instance: &daedalus_parser::Instance) -> Result<()> {
+        let parent = instance.parent.raw.to_ascii_uppercase();
+        let parent = *self.lookup(&instance.parent.span, &parent)?;
+
+        let class = if parent.kind == SymbolKind::Prototype {
+            self.class_of_prototype(&instance.parent.span, parent.id)?
         } else {
-            None
+            instance.parent.raw.to_ascii_uppercase()
         };
 
+        self.start_body(&instance.ident)?;
         let mut block = self.bytecode.block_builder();
 
-        self.symbol_table
-            .instance(ident, span, block.addr(), parent_data.id);
-
-        if let Some((_, addr)) = prototype.as_ref() {
-            block.call(*addr);
+        // Instances of a prototype start by running it
+        if parent.kind == SymbolKind::Prototype {
+            self.calls.push((block.call_later(), parent.id));
         }
 
         let builder = BlockBuilder {
-            parent: match prototype.as_ref() {
-                Some((class_name, _)) => class_name,
-                None => &parent,
-            },
+            parent: &class,
             symbol_indices: &self.symbol_indices,
             symbol_table: &mut self.symbol_table,
             block: &mut block,
+            calls: &mut self.calls,
         };
 
         builder.visit_instance(instance)
     }
 
-    /// Name of the class and the body address of prototype `id`, that an instance inherits from
-    fn prototype_of_instance(&self, span: &Range<usize>, id: u32) -> Result<(String, u32)> {
+    /// Name of the class of prototype `id`
+    fn class_of_prototype(&self, span: &Range<usize>, id: u32) -> Result<String> {
         let prototype = self
             .symbol_table
             .get(id)
@@ -301,14 +356,7 @@ impl Compiler {
             return Err(Error::unsupported(span, "multi level inheritance"));
         }
 
-        let SymbolData::Address(addr) = prototype.data else {
-            unreachable!("prototype symbols always have an address");
-        };
-
-        Ok((
-            class_name.clone(),
-            u32::try_from(addr).expect("body address is positive"),
-        ))
+        Ok(class_name.clone())
     }
 
     fn func(
@@ -323,9 +371,8 @@ impl Compiler {
 
         let ret = data_type(&func.ident.span, &func.ty)?;
 
-        let address = self.bytecode.next_available_address();
         self.symbol_table
-            .func(ident, span, func.args.len() as u32, ret, address);
+            .func(ident, span, func.args.len() as u32, ret, 0);
 
         // ZenGin keeps the class of the last instance parameter for the parameters after it
         let mut param_class = None;
@@ -350,12 +397,20 @@ impl Compiler {
             self.symbol_table.var(name, span, data_type, count, class);
         }
 
+        Ok(())
+    }
+
+    fn define_func(&mut self, func: &daedalus_parser::FunctionDefinition) -> Result<()> {
+        let name = func.ident.raw.to_ascii_uppercase();
+
+        self.start_body(&func.ident)?;
         let mut block = self.bytecode.block_builder();
         let builder = BlockBuilder {
-            parent: &ident_utf8,
+            parent: &name,
             symbol_indices: &self.symbol_indices,
             symbol_table: &mut self.symbol_table,
             block: &mut block,
+            calls: &mut self.calls,
         };
 
         builder.visit_function(func)
@@ -468,16 +523,22 @@ impl Compiler {
         let parent_id = self.lookup(&prototype.parent.span, &parent)?.id;
         let span = files.symbol_span(file_id, &prototype.span, SpanKind::Block);
 
+        self.symbol_table.prototype(ident, span, 0, parent_id);
+
+        Ok(())
+    }
+
+    fn define_prototype(&mut self, prototype: &daedalus_parser::Prototype) -> Result<()> {
+        let parent = prototype.parent.raw.to_ascii_uppercase();
+
+        self.start_body(&prototype.ident)?;
         let mut block = self.bytecode.block_builder();
-
-        self.symbol_table
-            .prototype(ident, span, block.addr(), parent_id);
-
         let builder = BlockBuilder {
             parent: &parent,
             symbol_indices: &self.symbol_indices,
             symbol_table: &mut self.symbol_table,
             block: &mut block,
+            calls: &mut self.calls,
         };
 
         builder.visit_prototype(prototype)

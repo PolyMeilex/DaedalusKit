@@ -40,6 +40,11 @@ impl Bytecode {
         }
     }
 
+    /// Set the address of a forward jump or call
+    pub fn patch(&mut self, label: Label, address: u32) {
+        patch(&mut self.bytecode, label, address);
+    }
+
     pub fn decode(mut r: impl Read) -> io::Result<Self> {
         let len = r.read_u32::<LittleEndian>()? as usize;
         let mut bytecode = vec![0; len];
@@ -119,8 +124,14 @@ impl<'a> BytecodeBlockBuilder<'a> {
 
     /// Make a forward jump target the next instruction
     pub fn bind(&mut self, label: Label) {
-        let target = self.position().to_le_bytes();
-        self.bytecode[label.0..label.0 + target.len()].copy_from_slice(&target);
+        let target = self.position();
+        patch(self.bytecode, label, target);
+    }
+
+    /// Call to a function whose address is not known yet, see [`Bytecode::patch`]
+    pub fn call_later(&mut self) -> Label {
+        self.encode(&Instruction::call(0));
+        Label(self.bytecode.len() - std::mem::size_of::<u32>())
     }
 
     pub fn ret(&mut self) -> &mut Self {
@@ -167,8 +178,13 @@ impl<'a> BytecodeBlockBuilder<'a> {
     }
 }
 
+fn patch(bytecode: &mut [u8], label: Label, address: u32) {
+    let address = address.to_le_bytes();
+    bytecode[label.0..label.0 + address.len()].copy_from_slice(&address);
+}
+
 #[derive(Debug)]
-#[must_use = "a forward jump has to be bound to its target"]
+#[must_use = "the address has to be patched"]
 pub struct Label(usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
