@@ -11,7 +11,7 @@ use codespan_reporting::{
 use daedalus_compiler::{CompilationUnit, CompileError, SourceFile};
 
 const USAGE: &str = "\
-usage: daedalus-compiler --unit <gothic|camera> -o <out.DAT> <input>...
+usage: daedalus-compiler --unit <gothic|fight|camera|menu|music|sfx|pfx|vfx> -o <out.DAT> <input>...
 
 Inputs are compiled in order. A `.src` input is expanded into the files it lists.
 The unit selects the builtin definitions the engine provides to the scripts.";

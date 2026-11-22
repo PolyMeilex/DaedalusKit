@@ -1,8 +1,8 @@
 //! Definitions the engine registers into the parser before any script is compiled
 
-/// Extern function declarations registered by the Gothic 2 engine for the game parser
-/// (`Gothic.src`), in registration order
+/// Extern function declarations registered by the Gothic 2 engine
 pub const GOTHIC_PRELUDE: &str = include_str!("builtin/gothic.d");
+pub const MENU_PRELUDE: &str = include_str!("builtin/menu.d");
 
 pub fn class_offset(name: &str) -> Option<u32> {
     match name {
@@ -333,6 +333,12 @@ pub fn get_address(name: &str) -> Option<u32> {
         "GAME_INITGERMAN" => 0x6fb9a0,
         "GAME_INITENGLISH" => 0x6fb9c0,
         "GAME_INITENGINTL" => 0x6fb9e0,
+        "UPDATE_CHOICEBOX" => 0x42db70,
+        "APPLY_OPTIONS_PERFORMANCE" => 0x42d040,
+        "APPLY_OPTIONS_VIDEO" => 0x42c450,
+        "APPLY_OPTIONS_AUDIO" => 0x42d4e0,
+        "APPLY_OPTIONS_GAME" => 0x42d710,
+        "APPLY_OPTIONS_CONTROLS" => 0x42d940,
         _ => return None,
     };
 

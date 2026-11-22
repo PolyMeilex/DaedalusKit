@@ -56,8 +56,20 @@ impl SourceFile {
 pub enum CompilationUnit {
     /// `Content/Gothic.src`
     Gothic,
+    /// `Content/Fight.src`
+    Fight,
     /// `System/Camera.src`
     Camera,
+    /// `System/Menu.src`
+    Menu,
+    /// `System/Music.src`
+    Music,
+    /// `System/SFX.src`
+    Sfx,
+    /// `System/ParticleFX.src`
+    ParticleFx,
+    /// `System/VisualFX.src`
+    VisualFx,
 }
 
 impl CompilationUnit {
@@ -68,7 +80,13 @@ impl CompilationUnit {
     pub fn prelude(self) -> Option<&'static str> {
         match self {
             CompilationUnit::Gothic => Some(builtin::GOTHIC_PRELUDE),
-            CompilationUnit::Camera => None,
+            CompilationUnit::Menu => Some(builtin::MENU_PRELUDE),
+            CompilationUnit::Fight
+            | CompilationUnit::Camera
+            | CompilationUnit::Music
+            | CompilationUnit::Sfx
+            | CompilationUnit::ParticleFx
+            | CompilationUnit::VisualFx => None,
         }
     }
 }
@@ -79,7 +97,13 @@ impl FromStr for CompilationUnit {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_ascii_lowercase().as_str() {
             "gothic" => Ok(Self::Gothic),
+            "fight" => Ok(Self::Fight),
             "camera" => Ok(Self::Camera),
+            "menu" => Ok(Self::Menu),
+            "music" => Ok(Self::Music),
+            "sfx" => Ok(Self::Sfx),
+            "pfx" => Ok(Self::ParticleFx),
+            "vfx" => Ok(Self::VisualFx),
             _ => Err(()),
         }
     }

@@ -1,0 +1,7 @@
+extern func void UPDATE_CHOICEBOX(var string PAR0)
+extern func void APPLY_OPTIONS_PERFORMANCE()
+extern func void APPLY_OPTIONS_VIDEO()
+extern func void APPLY_OPTIONS_AUDIO()
+extern func void APPLY_OPTIONS_GAME()
+extern func void APPLY_OPTIONS_CONTROLS()
+extern func int PLAYVIDEO(var string PAR0)
