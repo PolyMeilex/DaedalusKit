@@ -346,17 +346,12 @@ impl Compiler {
             .parent
             .expect("prototype symbols always have a parent class");
 
-        let (class_name, class) = self
-            .symbol_indices
-            .iter()
-            .find(|(_, v)| v.id == class_id)
-            .expect("parent of a symbol is in the symbol indices");
-
-        if class.kind != SymbolKind::Class {
+        let class_name = self.symbol_indices.name(class_id);
+        if self.symbol_indices.get(class_name).map(|class| class.kind) != Some(SymbolKind::Class) {
             return Err(Error::unsupported(span, "multi level inheritance"));
         }
 
-        Ok(class_name.clone())
+        Ok(class_name.to_string())
     }
 
     fn func(

@@ -22,26 +22,30 @@ pub struct SymbolIndex {
     pub kind: SymbolKind,
 }
 
-#[derive(Debug)]
-pub struct SymbolIndices(HashMap<String, SymbolIndex>);
-
-impl std::ops::Deref for SymbolIndices {
-    type Target = HashMap<String, SymbolIndex>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+#[derive(Debug, Default)]
+pub struct SymbolIndices {
+    by_name: HashMap<String, SymbolIndex>,
+    /// By id
+    names: Vec<String>,
 }
 
 impl SymbolIndices {
-    fn push_symbol(&mut self, ident: String, kind: SymbolKind) {
-        self.0.insert(
-            ident,
-            SymbolIndex {
-                id: self.0.len() as u32,
-                kind,
-            },
-        );
+    pub fn get(&self, name: &str) -> Option<&SymbolIndex> {
+        self.by_name.get(name)
+    }
+
+    pub fn name(&self, id: u32) -> &str {
+        &self.names[id as usize]
+    }
+
+    pub fn len(&self) -> usize {
+        self.names.len()
+    }
+
+    fn push_symbol(&mut self, name: String, kind: SymbolKind) {
+        let id = self.names.len() as u32;
+        self.by_name.insert(name.clone(), SymbolIndex { id, kind });
+        self.names.push(name);
     }
 
     fn handle_item(&mut self, item: &daedalus_parser::Item) {
@@ -51,7 +55,7 @@ impl SymbolIndices {
     }
 
     pub fn build<'a>(files: impl IntoIterator<Item = &'a File>) -> Self {
-        let mut symbol_map = Self(HashMap::new());
+        let mut symbol_map = Self::default();
 
         symbol_map.push_symbol("$INSTANCE_HELP".to_string(), SymbolKind::Other);
         for file in files {
