@@ -8,6 +8,8 @@ use zstring::ZString;
 
 use crate::properties::{DataType, PropFlag};
 
+pub mod text;
+
 #[derive(Debug, PartialEq)]
 pub struct Symbol {
     pub name: Option<ZString>,

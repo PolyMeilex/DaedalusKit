@@ -1,11 +1,27 @@
-use std::io::Cursor;
+use std::{
+    error::Error,
+    io::{Cursor, Write},
+};
 
-fn main() {
-    let mut args = std::env::args().skip(1);
+use dat_file::text;
 
-    let a = args.next().expect("Arg `a` not found");
+fn main() -> Result<(), Box<dyn Error>> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
 
-    let data = std::fs::read(a).unwrap();
-    let dat_a = dat_file::DatFile::decode(&mut Cursor::new(data)).unwrap();
-    dat_file::debug_print(&dat_a);
+    let (input, reserved) = match args.as_slice() {
+        [input] => (*input, true),
+        ["--no-reserved", input] | [input, "--no-reserved"] => (*input, false),
+        _ => return Err("usage: dat_print [--no-reserved] <file.DAT>".into()),
+    };
+
+    let bytes = std::fs::read(input).map_err(|e| format!("failed to read {input}: {e}"))?;
+    let dat = dat_file::DatFile::decode(&mut Cursor::new(bytes))
+        .map_err(|e| format!("failed to decode {input}: {e}"))?;
+
+    let text = text::print(&dat, reserved);
+
+    std::io::stdout().lock().write_all(text.as_bytes()).ok();
+
+    Ok(())
 }
