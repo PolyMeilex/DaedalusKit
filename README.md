@@ -14,9 +14,9 @@ Daedalus was used to develop cult classic like [Gothic](https://en.wikipedia.org
 - `output-units` - ✅
   - Uses the lexer to generates in-game dialog prompts file
   - Produces output byte compatible with the original engine, but orders of magnitude faster
-- `daedalus-fmt` - Opinionated language formate 🚧
-- `daedalus-compiler` - Compiles the code 🚧
+- `daedalus-fmt` - Opinionated language formatter 🚧
+- `daedalus-compiler` - Compiles the code ✅ (For now tested only against G2 Notr)
   - `daedalus-bytecode` - Representation of the bytecode format ✅
   - `dat-file` - Implementation of the file format used to store the bytecode and symbol definitions ✅
 - `interner` - String interner with support for case insetive interning needed for Daedalus
-- `daedalus-lsp` - Modern language server (not even started, only planed so far)
+- `daedalus-lsp` - Modern language server (not even started, only planned so far)
