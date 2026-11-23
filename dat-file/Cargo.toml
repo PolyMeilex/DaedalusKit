@@ -7,7 +7,6 @@ edition = "2021"
 daedalus-bytecode.workspace = true
 zstring.workspace = true
 
-encoding_rs.workspace = true
 bitflags.workspace = true
 byteorder.workspace = true
 num-derive.workspace = true

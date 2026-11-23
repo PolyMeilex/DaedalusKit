@@ -242,7 +242,7 @@ fn lex_string(lex: &mut Lexer<Token>) -> bool {
         }
 
         if c == '"' && !escaped {
-            lex.bump(remainder[0..total_len].as_bytes().len());
+            lex.bump(total_len);
             return true;
         }
 
@@ -272,11 +272,7 @@ impl<'a> DaedalusLexer<'a> {
     }
 
     pub fn eat_while(&mut self, f: impl Fn(&Token) -> bool) {
-        loop {
-            let Some(Ok(token)) = self.lexer.clone().next() else {
-                break;
-            };
-
+        while let Some(Ok(token)) = self.lexer.clone().next() {
             if f(&token) {
                 self.lexer.next();
             } else {

@@ -2,6 +2,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use daedalus_bytecode::Bytecode;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive as _;
+use pretty_assertions::assert_eq;
 use properties::{Properties, SymbolCodeSpan};
 use std::io::{Read, Write};
 use zstring::ZString;
@@ -469,6 +470,8 @@ pub mod properties {
     #[cfg(test)]
     #[test]
     fn props_setters_replace() {
+        use pretty_assertions::assert_eq;
+
         let mut props = ElemProps::default();
         props.set_count(u32::MAX);
         props.set_flags(PropFlag::CONST | PropFlag::RETURN);
