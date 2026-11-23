@@ -9,6 +9,35 @@ use byteorder::{ReadBytesExt as _, WriteBytesExt as _};
 pub use bstr;
 pub use bstr::{ByteSlice, ByteVec};
 
+pub mod windows_12xx {
+    use std::{borrow::Cow, sync::OnceLock};
+
+    pub use encoding_rs::Encoding;
+
+    use crate::ZString;
+
+    /// Gothic does not have a single encoding, each region has it's own WINDOWS_12xx variant.
+    ///
+    /// I'm to lazy to try to handle that nicely, so just making it a global switch
+    static ENCODING: OnceLock<&'static Encoding> = OnceLock::new();
+
+    pub fn set_encoding(encoding: &'static Encoding) -> Result<(), &'static Encoding> {
+        ENCODING.set(encoding)
+    }
+
+    fn encoding() -> &'static Encoding {
+        ENCODING.get_or_init(|| encoding_rs::WINDOWS_1250)
+    }
+
+    pub fn decode(bytes: &[u8]) -> Cow<'_, str> {
+        encoding().decode(bytes).0
+    }
+
+    pub fn encode(text: &str) -> ZString {
+        ZString::from(encoding().encode(text).0.into_owned())
+    }
+}
+
 #[derive(Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ZString(pub BString);
 

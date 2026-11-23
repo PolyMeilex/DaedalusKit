@@ -1,8 +1,9 @@
 use std::io::Write;
 
-use bstr::{BString, ByteSlice};
+use bstr::BString;
 use daedalus_lexer::{DaedalusLexer, Token, TokenError};
 use output_units::{OutputUnits, SvmClass};
+use zstring::windows_12xx;
 
 fn main() {
     let mut units = OutputUnits::new();
@@ -17,7 +18,7 @@ fn main() {
         .collect();
     let files_utf8: Vec<_> = files_bytes
         .iter()
-        .map(|(path, bytes)| (path, encoding_rs::WINDOWS_1250.decode(bytes).0))
+        .map(|(path, bytes)| (path, windows_12xx::decode(bytes)))
         .collect();
 
     let mut svm_class = SvmClass::new();
@@ -135,8 +136,8 @@ fn parse_ai_output(lexer: &mut DaedalusLexer, units: &mut OutputUnits) -> Result
         None
     };
 
-    let (id, _, _) = encoding_rs::WINDOWS_1250.encode(id);
-    let (text, _, _) = encoding_rs::WINDOWS_1250.encode(text.unwrap_or(""));
+    let id = windows_12xx::encode(id);
+    let text = windows_12xx::encode(text.unwrap_or(""));
 
     units.push(id.as_bstr(), text.as_bstr());
 
@@ -197,9 +198,9 @@ fn parse_svm_block<'a>(
             None
         };
 
-        let (key, _, _) = encoding_rs::WINDOWS_1250.encode(id);
-        let (text, _, _) = encoding_rs::WINDOWS_1250.encode(text.unwrap_or(""));
-        svm_instance.insert(field, key.as_ref(), text.as_ref());
+        let key = windows_12xx::encode(id);
+        let text = windows_12xx::encode(text.unwrap_or(""));
+        svm_instance.insert(field, key.as_bstr(), text.as_bstr());
     }
 
     units.push_svm(svm_instance);

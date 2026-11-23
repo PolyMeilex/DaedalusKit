@@ -16,7 +16,6 @@ src-file.workspace = true
 
 codespan.workspace = true
 codespan-reporting.workspace = true
-encoding_rs.workspace = true
 bitflags.workspace = true
 byteorder.workspace = true
 num-derive.workspace = true

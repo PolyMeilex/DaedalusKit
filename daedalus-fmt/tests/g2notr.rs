@@ -56,7 +56,7 @@ fn parser_g2notr_diff() {
         let path = path.strip_prefix(base_path).unwrap();
         println!("{path:?} ({} / {len})", id + 1);
 
-        let (src, _, _) = encoding_rs::WINDOWS_1250.decode(&bytes);
+        let src = zstring::windows_12xx::decode(&bytes);
         diff(path, &src);
     }
 }

@@ -87,7 +87,6 @@ dependencies = [
  "daedalus-bytecode",
  "daedalus-parser",
  "dat-file",
- "encoding_rs",
  "indoc",
  "num-derive",
  "num-traits",
@@ -102,10 +101,10 @@ version = "0.1.0"
 dependencies = [
  "codespan-reporting",
  "daedalus-parser",
- "encoding_rs",
  "indoc",
  "pretty_assertions",
  "src-file",
+ "zstring",
 ]
 
 [[package]]
@@ -267,9 +266,9 @@ dependencies = [
  "bstr",
  "codespan-reporting",
  "daedalus-lexer",
- "encoding_rs",
  "indexmap",
  "src-file",
+ "zstring",
 ]
 
 [[package]]
@@ -471,4 +470,5 @@ version = "0.1.0"
 dependencies = [
  "bstr",
  "byteorder",
+ "encoding_rs",
 ]

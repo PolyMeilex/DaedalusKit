@@ -33,7 +33,7 @@ impl SourceFile {
     pub fn read(path: impl Into<PathBuf>) -> io::Result<Self> {
         let path = path.into();
         let bytes = std::fs::read(&path)?;
-        let (source, _, _) = encoding_rs::WINDOWS_1250.decode(&bytes);
+        let source = zstring::windows_12xx::decode(&bytes);
 
         Ok(Self {
             path,

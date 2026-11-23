@@ -7,7 +7,7 @@ edition = "2021"
 bstr.workspace = true
 daedalus-lexer.workspace = true
 src-file.workspace = true
-encoding_rs.workspace = true
+zstring.workspace = true
 indexmap = "2.2.5"
 
 codespan-reporting.workspace = true

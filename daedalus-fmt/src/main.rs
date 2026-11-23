@@ -19,7 +19,7 @@ fn main() {
 }
 
 fn parse(path: &Path, bytes: &[u8]) {
-    let (src, _, _) = encoding_rs::WINDOWS_1250.decode(bytes);
+    let src = zstring::windows_12xx::decode(bytes);
 
     let mut lexer = DaedalusLexer::new(&src);
 
