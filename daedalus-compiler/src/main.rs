@@ -122,7 +122,7 @@ fn report(unit: CompilationUnit, sources: &[SourceFile], errors: &[CompileError]
             None => diagnostic.with_notes(vec![format!("in {}", error.path.display())]),
         };
 
-        term::emit(&mut writer.lock(), &config, &files, &diagnostic)
+        term::emit_to_write_style(&mut writer.lock(), &config, &files, &diagnostic)
             .expect("failed to write to stderr");
     }
 }

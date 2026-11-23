@@ -225,5 +225,5 @@ fn emit_error(
     let writer = StandardStream::stderr(ColorChoice::Always);
     let config = codespan_reporting::term::Config::default();
 
-    term::emit(&mut writer.lock(), &config, files, &diagnostic).unwrap();
+    term::emit_to_write_style(&mut writer.lock(), &config, files, &diagnostic).unwrap();
 }
