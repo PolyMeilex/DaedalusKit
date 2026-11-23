@@ -60,7 +60,7 @@ pub enum Token {
     Whitespace,
     #[regex(r"(\n|\r\n)+")]
     Newline,
-    #[regex(r"//[^\n\r]*")]
+    #[regex(r"//[^\n\r]*", allow_greedy = true)]
     LineComment,
 
     #[token("const")]
